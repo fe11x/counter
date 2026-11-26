@@ -8,13 +8,14 @@
     <title>我的计数器</title>
     <style>
         :root {
-            /* 模仿 iOS 系统颜色 */
             --bg: #F2F2F7;
             --card-bg: #FFFFFF;
             --text-main: #000000;
             --text-sub: #8E8E93;
             --blue: #007AFF;
             --red: #FF3B30;
+            --green: #34C759;
+            --border: #E5E5EA;
         }
 
         body {
@@ -22,7 +23,6 @@
             padding: 0;
             background-color: var(--bg);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            /* 禁止选中文本和长按高亮，体验更像 App */
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             -webkit-user-select: none;
@@ -32,9 +32,9 @@
         .header {
             padding: 60px 20px 15px;
             background: var(--card-bg);
-            font-size: 34px;
+            font-size: 30px;
             font-weight: 700;
-            border-bottom: 1px solid #E5E5EA;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -43,23 +43,34 @@
             z-index: 10;
         }
 
-        .add-btn {
-            font-size: 28px;
+        .header-btn {
+            font-size: 16px;
             color: var(--blue);
             background: none;
             border: none;
-            padding: 0;
+            padding: 8px 0;
             cursor: pointer;
-            font-weight: 400;
         }
 
-        /* 计数器列表区域 */
+        .add-btn {
+            font-size: 28px;
+            font-weight: 400;
+            padding: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* 列表区域 */
         .list-container {
             padding: 20px;
-            padding-bottom: 80px;
+            padding-bottom: 100px;
         }
 
-        /* 单个计数器卡片 */
+        /* 卡片设计 */
         .card {
             background: var(--card-bg);
             border-radius: 16px;
@@ -68,24 +79,80 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             display: flex;
             align-items: center;
-            justify-content: space-between;
+        }
+
+        .card-icon {
+            font-size: 36px;
+            margin-right: 16px;
+            width: 50px;
+            text-align: center;
         }
 
         .info-area {
             flex: 1;
+            min-width: 0; /* 防止文字溢出撑破 flex */
+        }
+
+        .title-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 6px;
         }
 
         .title {
             font-size: 18px;
             font-weight: 600;
             color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .step-badge {
+            font-size: 12px;
+            background: var(--bg);
+            color: var(--text-sub);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* 进度条 */
+        .progress-container {
+            margin-top: 8px;
             margin-bottom: 8px;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-track {
+            height: 6px;
+            background-color: var(--bg);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--blue);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.success {
+            background-color: var(--green);
         }
 
         .actions {
             display: flex;
             gap: 16px;
-            margin-top: 12px;
+            margin-top: 10px;
         }
 
         .btn-action {
@@ -93,140 +160,297 @@
             color: var(--blue);
             background: none;
             border: none;
-            padding: 0;
+            padding: 4px 0;
             cursor: pointer;
         }
+        .btn-action.delete { color: var(--red); }
 
-        .btn-action.delete {
-            color: var(--red);
+        .count-area {
+            text-align: right;
+            margin-left: 10px;
         }
 
         .count-number {
-            font-size: 40px;
+            font-size: 36px;
             font-weight: bold;
             color: var(--text-main);
-            text-align: right;
-            min-width: 60px;
-            margin-right: 20px;
+            margin-bottom: 8px;
+            font-variant-numeric: tabular-nums;
         }
 
-        /* +1 按钮 */
         .tap-btn {
             background: var(--blue);
             color: white;
             border: none;
             border-radius: 14px;
-            width: 60px;
-            height: 60px;
-            font-size: 32px;
+            width: 65px;
+            height: 50px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 10px rgba(0,122,255,0.3);
         }
+        .tap-btn:active { opacity: 0.7; transform: scale(0.95); transition: all 0.1s; }
 
-        .tap-btn:active {
-            opacity: 0.7;
-            transform: scale(0.95);
-            transition: all 0.1s;
+        .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 16px; }
+
+        /* 模态框 (弹窗) */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
         }
 
-        .empty-state {
-            text-align: center;
-            color: var(--text-sub);
-            margin-top: 80px;
+        .modal {
+            background: var(--card-bg);
+            width: 80%;
+            max-width: 320px;
+            border-radius: 16px;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: popIn 0.25s ease-out;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal h3 { margin: 0 0 20px 0; text-align: center; font-size: 18px; }
+
+        .form-group { margin-bottom: 16px; display: flex; flex-direction: column; }
+        .form-group label { font-size: 14px; color: var(--text-sub); margin-bottom: 6px; }
+        .form-group input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            border-radius: 8px;
             font-size: 16px;
+            outline: none;
+            -webkit-appearance: none; /* 移除 iOS 默认内阴影 */
         }
+        .form-group input:focus { border-color: var(--blue); }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+
+        .modal-btns { display: flex; gap: 12px; margin-top: 24px; }
+        .modal-btn {
+            flex: 1; padding: 12px; border-radius: 10px; font-size: 16px; border: none; font-weight: 600;
+        }
+        .modal-btn.cancel { background: var(--bg); color: var(--text-main); }
+        .modal-btn.save { background: var(--blue); color: white; }
+
     </style>
 </head>
 <body>
 
     <div class="header">
-        计数器
-        <button class="add-btn" onclick="addCounter()">＋</button>
+        <div class="header-left">
+            <span>计数器</span>
+            <button class="header-btn" onclick="resetAll()">一键清零</button>
+        </div>
+        <button class="header-btn add-btn" onclick="openModal()">＋</button>
     </div>
 
     <div class="list-container" id="counter-list">
-        <!-- 这里的卡片会由 JS 动态生成 -->
+        <!-- 动态生成 -->
+    </div>
+
+    <!-- 自定义弹窗，用于添加/编辑计数器 -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-title">添加计数器</h3>
+            <input type="hidden" id="m-id">
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 0.4;">
+                    <label>图标(Emoji)</label>
+                    <input type="text" id="m-icon" placeholder="🥤" maxlength="2">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>名称*</label>
+                    <input type="text" id="m-name" placeholder="如：喝水">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>每次步长</label>
+                    <input type="number" id="m-step" placeholder="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label>目标值(可选)</label>
+                    <input type="number" id="m-target" placeholder="留空则无目标">
+                </div>
+            </div>
+
+            <div class="modal-btns">
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+                <button class="modal-btn save" onclick="saveModal()">保存</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // 核心数据结构：从 localStorage 读取，如果没有则初始化为空数组
+        // 读取数据并做兼容性处理（老数据可能没有 step, target, icon）
         let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
+        counters = counters.map(c => ({
+            ...c,
+            step: c.step || 1,
+            target: c.target || null,
+            icon: c.icon || ''
+        }));
 
-        // 绑定界面容器
         const listContainer = document.getElementById('counter-list');
+        const modalOverlay = document.getElementById('modal-overlay');
 
-        // 保存数据并重新渲染页面
         function saveAndRender() {
             localStorage.setItem('my_multi_counters', JSON.stringify(counters));
             render();
         }
 
-        // 渲染页面函数
         function render() {
             if (counters.length === 0) {
                 listContainer.innerHTML = '<div class="empty-state">暂无计数器<br><br>点击右上角 ＋ 添加</div>';
                 return;
             }
 
-            // 循环遍历 counters 数组，生成对应的 HTML
-            listContainer.innerHTML = counters.map(c => `
+            listContainer.innerHTML = counters.map(c => {
+                // 计算进度
+                let progressHtml = '';
+                let isSuccess = false;
+                if (c.target && c.target > 0) {
+                    const percent = Math.min((c.count / c.target) * 100, 100);
+                    isSuccess = c.count >= c.target;
+                    progressHtml = `
+                        <div class="progress-container">
+                            <div class="progress-text">
+                                <span>进度</span>
+                                <span>${c.count} / ${c.target}</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill ${isSuccess ? 'success' : ''}" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // 图标处理
+                const iconHtml = c.icon ? `<div class="card-icon">${c.icon}</div>` : '';
+
+                return `
                 <div class="card">
+                    ${iconHtml}
                     <div class="info-area">
-                        <div class="title">${c.name}</div>
+                        <div class="title-row">
+                            <div class="title">${c.name}</div>
+                            ${c.step !== 1 ? `<div class="step-badge">步长 +${c.step}</div>` : ''}
+                        </div>
+                        
+                        ${progressHtml}
+
                         <div class="actions">
-                            <button class="btn-action" onclick="editCounter(${c.id})">重命名</button>
+                            <button class="btn-action" onclick="openModal(${c.id})">编辑设置</button>
                             <button class="btn-action" onclick="resetCounter(${c.id})">清零</button>
                             <button class="btn-action delete" onclick="deleteCounter(${c.id})">删除</button>
                         </div>
                     </div>
-                    <div class="count-number">${c.count}</div>
-                    <button class="tap-btn" onclick="increment(${c.id})">＋</button>
+                    
+                    <div class="count-area">
+                        <div class="count-number" style="color: ${isSuccess ? 'var(--green)' : 'var(--text-main)'}">${c.count}</div>
+                        <button class="tap-btn" onclick="increment(${c.id})">＋</button>
+                    </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        // 添加计数器
-        function addCounter() {
-            // 在手机上，prompt 会弹出一个原生的输入框
-            const name = prompt("给新计数器起个名字（比如：喝水、俯卧撑）：", "新计数器");
-            if (name !== null && name.trim() !== "") {
+        // ---------- 弹窗逻辑 ----------
+        function openModal(id = null) {
+            document.getElementById('m-id').value = id || '';
+            
+            if (id) {
+                // 编辑模式
+                const c = counters.find(x => x.id === id);
+                document.getElementById('modal-title').innerText = '编辑设置';
+                document.getElementById('m-name').value = c.name;
+                document.getElementById('m-icon').value = c.icon || '';
+                document.getElementById('m-step').value = c.step;
+                document.getElementById('m-target').value = c.target || '';
+            } else {
+                // 新增模式
+                document.getElementById('modal-title').innerText = '添加计数器';
+                document.getElementById('m-name').value = '';
+                document.getElementById('m-icon').value = '';
+                document.getElementById('m-step').value = '1';
+                document.getElementById('m-target').value = '';
+            }
+            
+            modalOverlay.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modalOverlay.style.display = 'none';
+        }
+
+        function saveModal() {
+            const id = document.getElementById('m-id').value;
+            const name = document.getElementById('m-name').value.trim();
+            const icon = document.getElementById('m-icon').value.trim();
+            const step = parseInt(document.getElementById('m-step').value) || 1;
+            const targetVal = document.getElementById('m-target').value;
+            const target = targetVal ? parseInt(targetVal) : null;
+
+            if (!name) {
+                alert("请输入名称");
+                return;
+            }
+
+            if (id) {
+                // 更新现有
+                const index = counters.findIndex(c => c.id == id);
+                if (index !== -1) {
+                    counters[index].name = name;
+                    counters[index].icon = icon;
+                    counters[index].step = step;
+                    counters[index].target = target;
+                }
+            } else {
+                // 新增
                 counters.push({
-                    id: Date.now(), // 用当前时间戳作为唯一ID
-                    name: name.trim(),
+                    id: Date.now(),
+                    name: name,
+                    icon: icon,
+                    step: step,
+                    target: target,
                     count: 0
                 });
-                saveAndRender();
             }
+
+            saveAndRender();
+            closeModal();
         }
 
-        // 增加计数
+        // ---------- 核心操作逻辑 ----------
         function increment(id) {
             const index = counters.findIndex(c => c.id === id);
             if (index !== -1) {
-                counters[index].count += 1;
+                counters[index].count += counters[index].step;
                 saveAndRender();
             }
         }
 
-        // 重命名计数器
-        function editCounter(id) {
-            const index = counters.findIndex(c => c.id === id);
-            if (index !== -1) {
-                const newName = prompt("请输入新名称：", counters[index].name);
-                if (newName !== null && newName.trim() !== "") {
-                    counters[index].name = newName.trim();
-                    saveAndRender();
-                }
-            }
-        }
-
-        // 清零计数器
         function resetCounter(id) {
             const index = counters.findIndex(c => c.id === id);
             if (index !== -1) {
-                // confirm 会在手机上弹出系统原生的确认框
                 if (confirm(`确定要将【${counters[index].name}】清零吗？`)) {
                     counters[index].count = 0;
                     saveAndRender();
@@ -234,19 +458,25 @@
             }
         }
 
-        // 删除计数器
         function deleteCounter(id) {
             const index = counters.findIndex(c => c.id === id);
             if (index !== -1) {
                 if (confirm(`删除后不可恢复，确定要删除【${counters[index].name}】吗？`)) {
-                    // 过滤掉被删除的项
                     counters = counters.filter(c => c.id !== id);
                     saveAndRender();
                 }
             }
         }
 
-        // 页面首次加载时执行渲染
+        function resetAll() {
+            if (counters.length === 0) return;
+            if (confirm(`⚠️ 警告：这会将所有计数器的数值全部清零！确定要继续吗？`)) {
+                counters.forEach(c => c.count = 0);
+                saveAndRender();
+            }
+        }
+
+        // 首次加载渲染
         render();
     </script>
 </body>
