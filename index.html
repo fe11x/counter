@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- 让网页在手机上全屏显示，像个真 App -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>我的计数器</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f5;
+            font-family: -apple-system, sans-serif;
+            /* 防止用户点击时选中文本 */
+            user-select: none; 
+            -webkit-user-select: none;
+        }
+        #number {
+            font-size: 100px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 50px;
+        }
+        .btn {
+            font-size: 24px;
+            padding: 20px 60px;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,122,255,0.3);
+        }
+        /* 增加一个简单的重置按钮 */
+        .reset {
+            margin-top: 30px;
+            font-size: 16px;
+            color: #888;
+            background: none;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="number">0</div>
+    <button class="btn" onclick="addOne()">点击 +1</button>
+    <button class="reset" onclick="reset()">重置</button>
+
+    <script>
+        let count = 0;
+        const numberDisplay = document.getElementById('number');
+
+        // 页面加载时，从手机本地缓存读取之前的数字
+        if (localStorage.getItem('myCount')) {
+            count = parseInt(localStorage.getItem('myCount'));
+            numberDisplay.innerText = count;
+        }
+
+        function addOne() {
+            count++;
+            numberDisplay.innerText = count;
+            // 存入手机缓存，杀掉后台数字也不丢
+            localStorage.setItem('myCount', count);
+        }
+
+        function reset() {
+            count = 0;
+            numberDisplay.innerText = count;
+            localStorage.setItem('myCount', count);
+        }
+    </script>
+</body>
+</html>
