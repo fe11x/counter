@@ -2,14 +2,16 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <!-- 加入 viewport-fit=cover，以便完美适配刘海屏和灵动岛的顶部安全区域 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>我的计数器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         :root {
-            --bg: #F2F2F7;
+            /* 加深背景色至 #E5E5EA (更深的 iOS 灰色)，凸显卡片的白色 */
+            --bg: #E5E5EA;
             --card-bg: #FFFFFF;
             --text-main: #000000;
             --text-sub: #8E8E93;
@@ -17,7 +19,7 @@
             --red: #FF3B30;
             --green: #34C759;
             --orange: #FF9500;
-            --border: #E5E5EA;
+            --border: #D1D1D6;
         }
 
         body {
@@ -26,37 +28,39 @@
             -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
         }
 
-        /* 顶部导航栏 (收窄) */
+        /* 顶部导航栏 (极致收窄并适配刘海屏) */
         .header {
-            padding: 48px 16px 10px; background: var(--card-bg); font-size: 24px; font-weight: 700;
+            /* 使用 env(safe-area-inset-top) 动态获取刘海高度，而不是写死 48px */
+            padding: max(env(safe-area-inset-top), 16px) 14px 8px; 
+            background: var(--card-bg); font-size: 22px; font-weight: 700;
             border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10;
         }
-        .header-btn { font-size: 15px; color: var(--blue); background: none; border: none; padding: 4px 0; cursor: pointer; }
-        .add-btn { font-size: 24px; font-weight: 400; padding: 0; }
-        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-btn { font-size: 14px; color: var(--blue); background: none; border: none; padding: 4px 0; cursor: pointer; }
+        .add-btn { font-size: 22px; font-weight: 400; padding: 0; }
+        .header-left { display: flex; align-items: center; gap: 10px; }
 
         /* 列表区域 */
-        .list-container { padding: 12px 16px; padding-bottom: 100px; }
-        .tip-text { text-align: center; color: var(--text-sub); font-size: 12px; margin-bottom: 12px; }
+        .list-container { padding: 10px 14px; padding-bottom: 100px; }
+        .tip-text { text-align: center; color: var(--text-sub); font-size: 11px; margin-bottom: 10px; }
 
-        /* 卡片设计 (收窄高密度) */
+        /* 卡片设计 (终极收窄高密度) */
         .card {
-            background: var(--card-bg); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
-            box-shadow: 0 1px 6px rgba(0,0,0,0.04); display: flex; align-items: center;
+            background: var(--card-bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center;
             transition: transform 0.2s, box-shadow 0.2s;
         }
         
         .sortable-ghost { opacity: 0.4; }
-        .sortable-drag { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.12); z-index: 99; }
+        .sortable-drag { transform: scale(1.02); box-shadow: 0 6px 16px rgba(0,0,0,0.12); z-index: 99; }
 
-        .card-icon { font-size: 26px; margin-right: 12px; width: 34px; text-align: center; }
+        .card-icon { font-size: 22px; margin-right: 10px; width: 28px; text-align: center; }
         .info-area { flex: 1; min-width: 0; }
-        .title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
-        .title { font-size: 16px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-        .step-badge { font-size: 11px; background: var(--bg); color: var(--text-sub); padding: 2px 6px; border-radius: 4px; }
+        .title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 2px; }
+        .title { font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .step-badge { font-size: 10px; background: var(--bg); color: var(--text-sub); padding: 1px 5px; border-radius: 4px; }
 
         /* 倒计时徽章 */
-        .timer-badge { font-size: 11px; padding: 2px 6px; border-radius: 8px; font-weight: 600; font-variant-numeric: tabular-nums; transition: all 0.3s ease; }
+        .timer-badge { font-size: 10px; padding: 2px 5px; border-radius: 6px; font-weight: 600; font-variant-numeric: tabular-nums; transition: all 0.3s ease; }
         .timer-badge.idle { background: var(--bg); color: var(--text-sub); }
         .timer-badge.normal { background: #E5F0FF; color: var(--blue); }
         .timer-badge.warning { background: #FFF3E0; color: var(--orange); }
@@ -64,72 +68,72 @@
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
 
         /* 进度条 */
-        .progress-container { margin-top: 4px; margin-bottom: 4px; }
-        .progress-text { font-size: 11px; color: var(--text-sub); margin-bottom: 3px; display: flex; justify-content: space-between; }
-        .progress-track { height: 5px; background-color: var(--bg); border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+        .progress-container { margin-top: 3px; margin-bottom: 3px; }
+        .progress-text { font-size: 10px; color: var(--text-sub); margin-bottom: 2px; display: flex; justify-content: space-between; }
+        .progress-track { height: 4px; background-color: var(--bg); border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
 
         /* 底部操作区 */
-        .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px; }
-        .btn-action { font-size: 13px; color: var(--blue); background: none; border: none; padding: 2px 0; cursor: pointer; }
+        .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
+        .btn-action { font-size: 12px; color: var(--blue); background: none; border: none; padding: 2px 0; cursor: pointer; }
         .btn-action.delete { color: var(--red); }
 
         .count-area { text-align: right; margin-left: 8px; }
-        .count-number { font-size: 26px; font-weight: bold; color: var(--text-main); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
-        .tap-btn { color: white; border: none; border-radius: 12px; width: 54px; height: 44px; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .count-number { font-size: 22px; font-weight: bold; color: var(--text-main); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+        .tap-btn { color: white; border: none; border-radius: 10px; width: 50px; height: 38px; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
         .tap-btn:active { opacity: 0.7; transform: scale(0.95); transition: all 0.1s; }
-        .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 15px; }
+        .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 14px; }
 
         /* 模态框 */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
-        .modal { background: var(--card-bg); width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; border-radius: 16px; padding: 20px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: popIn 0.2s ease-out; }
+        .modal { background: var(--card-bg); width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; border-radius: 14px; padding: 18px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: popIn 0.2s ease-out; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal h3 { margin: 0 0 16px 0; text-align: center; font-size: 17px; }
+        .modal h3 { margin: 0 0 14px 0; text-align: center; font-size: 16px; }
 
-        .form-group { margin-bottom: 14px; display: flex; flex-direction: column; }
-        .form-group label { font-size: 13px; color: var(--text-sub); margin-bottom: 6px; }
-        .form-group input { background: var(--bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 15px; outline: none; -webkit-appearance: none; }
+        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .form-group label { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+        .form-group input { background: var(--bg); border: 1px solid var(--border); padding: 8px 10px; border-radius: 8px; font-size: 14px; outline: none; -webkit-appearance: none; }
         .form-group input:focus { border-color: var(--blue); }
-        .form-row { display: flex; gap: 10px; }
+        .form-row { display: flex; gap: 8px; }
         .form-row .form-group { flex: 1; }
 
         /* 图标与颜色选择器网格 */
         .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-        .icon-item { font-size: 22px; text-align: center; padding: 6px 0; background: var(--bg); border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .icon-item { font-size: 20px; text-align: center; padding: 6px 0; background: var(--bg); border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
         .icon-item.selected { border-color: var(--blue); background: #E5F0FF; transform: scale(1.1); }
-        .icon-item.none { font-size: 13px; color: var(--text-sub); display: flex; align-items: center; justify-content: center; }
+        .icon-item.none { font-size: 12px; color: var(--text-sub); display: flex; align-items: center; justify-content: center; }
         
         .color-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-        .color-item { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; box-sizing: border-box; transition: transform 0.2s; }
+        .color-item { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; box-sizing: border-box; transition: transform 0.2s; }
         .color-item.selected { transform: scale(1.15); box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--text-sub); }
 
-        .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
-        .modal-btn { flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; border: none; font-weight: 600; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 14px; }
+        .modal-btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; border: none; font-weight: 600; }
         .modal-btn.cancel { background: var(--bg); color: var(--text-main); }
         .modal-btn.save { background: var(--blue); color: white; }
 
         /* 统计面板增强样式 */
-        .stats-summary-box { background: var(--bg); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-        .stats-grand-total { font-size: 15px; color: var(--text-sub); text-align: center; margin-bottom: 12px; }
-        .stats-grand-total span { font-size: 28px; font-weight: bold; color: var(--text-main); display: block; margin-top: 4px; }
+        .stats-summary-box { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+        .stats-grand-total { font-size: 14px; color: var(--text-sub); text-align: center; margin-bottom: 10px; }
+        .stats-grand-total span { font-size: 26px; font-weight: bold; color: var(--text-main); display: block; margin-top: 2px; }
         
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .stats-card { background: var(--card-bg); padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-        .stats-name-col { display: flex; align-items: center; gap: 6px; font-size: 13px; overflow: hidden; }
+        .stats-card { background: var(--card-bg); padding: 8px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .stats-name-col { display: flex; align-items: center; gap: 4px; font-size: 12px; overflow: hidden; }
         .stats-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .stats-total { font-weight: bold; font-size: 15px; }
+        .stats-total { font-weight: bold; font-size: 14px; }
 
-        .section-title { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; }
+        .section-title { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: 600; }
 
         /* 统计历史列表项 */
-        .stat-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .stat-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
         .stat-item:last-child { border-bottom: none; }
-        .stat-icon { font-size: 20px; margin-right: 10px; width: 28px; text-align: center; }
+        .stat-icon { font-size: 18px; margin-right: 8px; width: 24px; text-align: center; }
         .stat-info { flex: 1; }
-        .stat-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; color: var(--text-main); }
-        .stat-time { font-size: 11px; color: var(--text-sub); }
-        .stat-target { font-weight: bold; font-size: 16px; }
-        .stats-empty { text-align: center; color: var(--text-sub); padding: 30px 0; font-size: 14px; }
+        .stat-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; color: var(--text-main); }
+        .stat-time { font-size: 10px; color: var(--text-sub); }
+        .stat-target { font-weight: bold; font-size: 15px; }
+        .stats-empty { text-align: center; color: var(--text-sub); padding: 30px 0; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -160,13 +164,13 @@
             </div>
 
             <div class="form-group">
-                <label>选择图标</label>
+                <label>选择图标 (水果 & 运动)</label>
                 <div class="icon-grid" id="icon-grid"></div>
             </div>
 
             <div class="form-group">
                 <label>名称*</label>
-                <input type="text" id="m-name" placeholder="如：喝水、背单词">
+                <input type="text" id="m-name" placeholder="如：吃苹果、俯卧撑">
             </div>
             
             <div class="form-row">
@@ -197,7 +201,7 @@
         <div class="modal" style="width: 95%; max-width: 400px; padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <button class="btn-action delete" onclick="clearStats()">清空记录</button>
-                <h3 style="margin: 0; font-size: 17px;">数据统计</h3>
+                <h3 style="margin: 0; font-size: 16px;">数据统计</h3>
                 <button class="btn-action" onclick="closeStats()" style="font-weight: 600;">关闭</button>
             </div>
             
@@ -215,7 +219,13 @@
     </div>
 
     <script>
-        const EMOJI_LIST = ['💧','☕','💊','🍎','🏃','🏋️','🧘','📚','💻','🎮','🚬','🚽','🛌','🎯','💰'];
+        // 更新了 Emoji 列表，23个水果/运动 + 1个“无” = 24个完美铺满4行
+        const EMOJI_LIST = [
+            '🍎','🍐','🍊','🍋','🍌','🍉',
+            '🍇','🍓','🍈','🍒','🍑','🍍',
+            '🥥','🥝','🍅','🥑','⚽️','🏀',
+            '🎾','🏓','🏸','🏊','🚴','🏃'
+        ];
         const COLOR_LIST = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#5AC8FA', '#8E8E93'];
         
         let currentSelectedIcon = '';
@@ -289,7 +299,7 @@
                 }
 
                 const timerHtml = c.timerMinutes > 0 
-                    ? `<span id="timer-${c.id}" class="timer-badge idle">加载中</span>` : '';
+                    ? `<span id="timer-${c.id}" class="timer-badge idle">待点击</span>` : '';
                 const iconHtml = c.icon ? `<div class="card-icon">${c.icon}</div>` : '';
 
                 return `
@@ -354,7 +364,7 @@
                 if (!el) return;
 
                 if (!c.lastUpdated) {
-                    el.innerText = '等待点击'; el.className = 'timer-badge idle'; return;
+                    el.innerText = '待点击'; el.className = 'timer-badge idle'; return;
                 }
 
                 const elapsed = now - c.lastUpdated;
@@ -467,12 +477,9 @@
         // ---------- 统计面板逻辑 ----------
         function openStats() {
             const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
-            
-            // 1. 计算总数值：历史达成总和 + 当前正在进行的总和
             let grandTotal = 0;
-            const statsMap = {}; // 用来按名称聚合每个 counter 的数据
+            const statsMap = {}; 
             
-            // 累加历史记录
             history.forEach(item => {
                 grandTotal += item.target;
                 const key = item.name;
@@ -480,7 +487,6 @@
                 statsMap[key].total += item.target;
             });
             
-            // 累加当前活跃计数器里的未达成/无目标数值
             counters.forEach(c => {
                 grandTotal += c.count;
                 const key = c.name;
@@ -488,16 +494,14 @@
                 statsMap[key].total += c.count;
             });
 
-            // 渲染汇总区域
             const summaryEl = document.getElementById('stats-summary-container');
             if (grandTotal === 0) {
                 summaryEl.innerHTML = '<div class="stats-empty" style="padding: 10px 0;">暂无任何累计数据</div>';
             } else {
-                // 将对象转为数组并按总数从大到小排序
                 const sortedKeys = Object.keys(statsMap).sort((a,b) => statsMap[b].total - statsMap[a].total);
                 const cardsHtml = sortedKeys.map(k => {
                     const s = statsMap[k];
-                    const iconHtml = s.icon ? `<span style="font-size: 16px;">${s.icon}</span>` : '';
+                    const iconHtml = s.icon ? `<span style="font-size: 14px;">${s.icon}</span>` : '';
                     return `
                         <div class="stats-card">
                             <div class="stats-name-col">${iconHtml}<span class="stats-name">${k}</span></div>
@@ -517,7 +521,6 @@
                 `;
             }
 
-            // 2. 渲染历史记录列表
             const listEl = document.getElementById('stats-list');
             if (history.length === 0) {
                 listEl.innerHTML = '<div class="stats-empty" style="padding: 20px 0;">暂无达成历史</div>';
@@ -551,7 +554,7 @@
             if (history.length === 0) return;
             if (confirm("确定要清空所有达成历史记录吗？（当前面板的活跃计数不会被清零）")) {
                 localStorage.setItem('my_counters_history', JSON.stringify([]));
-                openStats(); // 重新渲染刷新
+                openStats(); 
             }
         }
 
