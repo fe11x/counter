@@ -6,6 +6,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>我的计数器</title>
+    <!-- 引入强大的拖拽库 SortableJS，专为移动端触摸优化 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         :root {
             --bg: #F2F2F7;
@@ -15,239 +17,98 @@
             --blue: #007AFF;
             --red: #FF3B30;
             --green: #34C759;
+            --orange: #FF9500;
             --border: #E5E5EA;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg);
+            margin: 0; padding: 0; background-color: var(--bg);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
         }
 
         /* 顶部导航栏 */
         .header {
-            padding: 60px 20px 15px;
-            background: var(--card-bg);
-            font-size: 30px;
-            font-weight: 700;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            padding: 60px 20px 15px; background: var(--card-bg); font-size: 30px; font-weight: 700;
+            border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10;
         }
-
-        .header-btn {
-            font-size: 16px;
-            color: var(--blue);
-            background: none;
-            border: none;
-            padding: 8px 0;
-            cursor: pointer;
-        }
-
-        .add-btn {
-            font-size: 28px;
-            font-weight: 400;
-            padding: 0;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+        .header-btn { font-size: 16px; color: var(--blue); background: none; border: none; padding: 8px 0; cursor: pointer; }
+        .add-btn { font-size: 28px; font-weight: 400; padding: 0; }
+        .header-left { display: flex; align-items: center; gap: 15px; }
 
         /* 列表区域 */
-        .list-container {
-            padding: 20px;
-            padding-bottom: 100px;
-        }
+        .list-container { padding: 20px; padding-bottom: 10px; }
+        .tip-text { text-align: center; color: var(--text-sub); font-size: 13px; margin-bottom: 20px; }
 
         /* 卡片设计 */
         .card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            display: flex;
-            align-items: center;
+            background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+        
+        /* 拖拽时的样式 */
+        .sortable-ghost { opacity: 0.4; }
+        .sortable-drag { transform: scale(1.02); box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 99; }
 
-        .card-icon {
-            font-size: 36px;
-            margin-right: 16px;
-            width: 50px;
-            text-align: center;
-        }
+        .card-icon { font-size: 36px; margin-right: 16px; width: 50px; text-align: center; }
+        .info-area { flex: 1; min-width: 0; }
+        .title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+        .title { font-size: 18px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .step-badge { font-size: 12px; background: var(--bg); color: var(--text-sub); padding: 2px 6px; border-radius: 4px; }
 
-        .info-area {
-            flex: 1;
-            min-width: 0; /* 防止文字溢出撑破 flex */
-        }
-
-        .title-row {
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-
-        .title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-main);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .step-badge {
-            font-size: 12px;
-            background: var(--bg);
-            color: var(--text-sub);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
+        /* 倒计时徽章 */
+        .timer-badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-variant-numeric: tabular-nums; transition: all 0.3s ease; }
+        .timer-badge.idle { background: var(--bg); color: var(--text-sub); }
+        .timer-badge.normal { background: #E5F0FF; color: var(--blue); }
+        .timer-badge.warning { background: #FFF3E0; color: var(--orange); }
+        .timer-badge.danger { background: #FFEBEA; color: var(--red); animation: shake 1s infinite; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
 
         /* 进度条 */
-        .progress-container {
-            margin-top: 8px;
-            margin-bottom: 8px;
-        }
+        .progress-container { margin-top: 8px; margin-bottom: 8px; }
+        .progress-text { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .progress-track { height: 6px; background-color: var(--bg); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background-color: var(--blue); border-radius: 3px; transition: width 0.3s ease; }
+        .progress-fill.success { background-color: var(--green); }
 
-        .progress-text {
-            font-size: 12px;
-            color: var(--text-sub);
-            margin-bottom: 4px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .progress-track {
-            height: 6px;
-            background-color: var(--bg);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background-color: var(--blue);
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-fill.success {
-            background-color: var(--green);
-        }
-
-        .actions {
-            display: flex;
-            gap: 16px;
-            margin-top: 10px;
-        }
-
-        .btn-action {
-            font-size: 14px;
-            color: var(--blue);
-            background: none;
-            border: none;
-            padding: 4px 0;
-            cursor: pointer;
-        }
+        /* 底部操作区 */
+        .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 10px; }
+        .btn-action { font-size: 14px; color: var(--blue); background: none; border: none; padding: 4px 0; cursor: pointer; }
         .btn-action.delete { color: var(--red); }
 
-        .count-area {
-            text-align: right;
-            margin-left: 10px;
-        }
-
-        .count-number {
-            font-size: 36px;
-            font-weight: bold;
-            color: var(--text-main);
-            margin-bottom: 8px;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .tap-btn {
-            background: var(--blue);
-            color: white;
-            border: none;
-            border-radius: 14px;
-            width: 65px;
-            height: 50px;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,122,255,0.3);
-        }
+        .count-area { text-align: right; margin-left: 10px; }
+        .count-number { font-size: 36px; font-weight: bold; color: var(--text-main); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+        .tap-btn { background: var(--blue); color: white; border: none; border-radius: 14px; width: 65px; height: 50px; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
         .tap-btn:active { opacity: 0.7; transform: scale(0.95); transition: all 0.1s; }
-
         .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 16px; }
 
-        /* 模态框 (弹窗) */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            z-index: 100;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal {
-            background: var(--card-bg);
-            width: 80%;
-            max-width: 320px;
-            border-radius: 16px;
-            padding: 24px;
-            box-sizing: border-box;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            animation: popIn 0.25s ease-out;
-        }
-
-        @keyframes popIn {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
+        /* 模态框 */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal { background: var(--card-bg); width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; border-radius: 16px; padding: 24px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: popIn 0.25s ease-out; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal h3 { margin: 0 0 20px 0; text-align: center; font-size: 18px; }
 
         .form-group { margin-bottom: 16px; display: flex; flex-direction: column; }
-        .form-group label { font-size: 14px; color: var(--text-sub); margin-bottom: 6px; }
-        .form-group input {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 16px;
-            outline: none;
-            -webkit-appearance: none; /* 移除 iOS 默认内阴影 */
-        }
+        .form-group label { font-size: 14px; color: var(--text-sub); margin-bottom: 8px; }
+        .form-group input { background: var(--bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 16px; outline: none; -webkit-appearance: none; }
         .form-group input:focus { border-color: var(--blue); }
         .form-row { display: flex; gap: 12px; }
         .form-row .form-group { flex: 1; }
 
-        .modal-btns { display: flex; gap: 12px; margin-top: 24px; }
-        .modal-btn {
-            flex: 1; padding: 12px; border-radius: 10px; font-size: 16px; border: none; font-weight: 600;
+        /* 图标选择器网格 */
+        .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+        .icon-item { 
+            font-size: 24px; text-align: center; padding: 8px 0; background: var(--bg); 
+            border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
         }
+        .icon-item.selected { border-color: var(--blue); background: #E5F0FF; transform: scale(1.1); }
+        .icon-item.none { font-size: 14px; color: var(--text-sub); display: flex; align-items: center; justify-content: center; }
+
+        .modal-btns { display: flex; gap: 12px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 12px; border-radius: 10px; font-size: 16px; border: none; font-weight: 600; }
         .modal-btn.cancel { background: var(--bg); color: var(--text-main); }
         .modal-btn.save { background: var(--blue); color: white; }
-
     </style>
 </head>
 <body>
@@ -255,30 +116,33 @@
     <div class="header">
         <div class="header-left">
             <span>计数器</span>
-            <button class="header-btn" onclick="resetAll()">一键清零</button>
+            <button class="header-btn" onclick="resetAll()">清零全部</button>
         </div>
         <button class="header-btn add-btn" onclick="openModal()">＋</button>
     </div>
+
+    <div class="tip-text" id="drag-tip" style="display: none;">💡 长按卡片可自由拖拽排序</div>
 
     <div class="list-container" id="counter-list">
         <!-- 动态生成 -->
     </div>
 
-    <!-- 自定义弹窗，用于添加/编辑计数器 -->
+    <!-- 弹窗 -->
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal">
             <h3 id="modal-title">添加计数器</h3>
             <input type="hidden" id="m-id">
             
-            <div class="form-row">
-                <div class="form-group" style="flex: 0.4;">
-                    <label>图标(Emoji)</label>
-                    <input type="text" id="m-icon" placeholder="🥤" maxlength="2">
+            <div class="form-group">
+                <label>选择图标</label>
+                <div class="icon-grid" id="icon-grid">
+                    <!-- JS 动态生成 Emoji 网格 -->
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>名称*</label>
-                    <input type="text" id="m-name" placeholder="如：喝水">
-                </div>
+            </div>
+
+            <div class="form-group">
+                <label>名称*</label>
+                <input type="text" id="m-name" placeholder="如：喝水、背单词">
             </div>
             
             <div class="form-row">
@@ -288,8 +152,13 @@
                 </div>
                 <div class="form-group">
                     <label>目标值(可选)</label>
-                    <input type="number" id="m-target" placeholder="留空则无目标">
+                    <input type="number" id="m-target" placeholder="无目标">
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label>倒计时提醒 (分钟) - 留空不提醒</label>
+                <input type="number" id="m-timer" placeholder="如：5 代表5分钟内需+1">
             </div>
 
             <div class="modal-btns">
@@ -300,31 +169,60 @@
     </div>
 
     <script>
-        // 读取数据并做兼容性处理（老数据可能没有 step, target, icon）
+        // 数据初始化
         let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
         counters = counters.map(c => ({
-            ...c,
-            step: c.step || 1,
-            target: c.target || null,
-            icon: c.icon || ''
+            ...c, step: c.step || 1, target: c.target || null, icon: c.icon || '',
+            timerMinutes: c.timerMinutes || 0, lastUpdated: c.lastUpdated || 0
         }));
 
         const listContainer = document.getElementById('counter-list');
         const modalOverlay = document.getElementById('modal-overlay');
+        const dragTip = document.getElementById('drag-tip');
 
-        function saveAndRender() {
+        // Emoji 预设列表
+        const EMOJI_LIST = ['💧','☕','💊','🍎','🏃','🏋️','🧘','📚','💻','🎮','🚬','🚽','🛌','🎯','💰'];
+        let currentSelectedIcon = '';
+
+        // 渲染 Emoji 挑选器
+        function renderEmojiGrid() {
+            const grid = document.getElementById('icon-grid');
+            let html = EMOJI_LIST.map(emoji => `
+                <div class="icon-item ${currentSelectedIcon === emoji ? 'selected' : ''}" 
+                     onclick="selectIcon('${emoji}')">${emoji}</div>
+            `).join('');
+            
+            // 加入一个“无图标”的选项
+            html += `<div class="icon-item none ${currentSelectedIcon === '' ? 'selected' : ''}" 
+                          onclick="selectIcon('')">无</div>`;
+            grid.innerHTML = html;
+        }
+
+        function selectIcon(emoji) {
+            currentSelectedIcon = emoji;
+            renderEmojiGrid(); // 重新渲染以更新高亮状态
+        }
+
+        let sortableInstance = null;
+
+        function saveAndRender(skipRender = false) {
             localStorage.setItem('my_multi_counters', JSON.stringify(counters));
-            render();
+            if (!skipRender) {
+                render();
+                updateTimers();
+            }
         }
 
         function render() {
             if (counters.length === 0) {
+                dragTip.style.display = 'none';
                 listContainer.innerHTML = '<div class="empty-state">暂无计数器<br><br>点击右上角 ＋ 添加</div>';
                 return;
             }
 
-            listContainer.innerHTML = counters.map(c => {
-                // 计算进度
+            dragTip.style.display = counters.length > 1 ? 'block' : 'none';
+
+            listContainer.innerHTML = counters.map((c) => {
                 let progressHtml = '';
                 let isSuccess = false;
                 if (c.target && c.target > 0) {
@@ -343,22 +241,22 @@
                     `;
                 }
 
-                // 图标处理
+                const timerHtml = c.timerMinutes > 0 
+                    ? `<span id="timer-${c.id}" class="timer-badge idle">加载中...</span>` : '';
                 const iconHtml = c.icon ? `<div class="card-icon">${c.icon}</div>` : '';
 
                 return `
-                <div class="card">
+                <div class="card" data-id="${c.id}">
                     ${iconHtml}
                     <div class="info-area">
                         <div class="title-row">
                             <div class="title">${c.name}</div>
                             ${c.step !== 1 ? `<div class="step-badge">步长 +${c.step}</div>` : ''}
+                            ${timerHtml}
                         </div>
-                        
                         ${progressHtml}
-
                         <div class="actions">
-                            <button class="btn-action" onclick="openModal(${c.id})">编辑设置</button>
+                            <button class="btn-action" onclick="openModal(${c.id})">设置</button>
                             <button class="btn-action" onclick="resetCounter(${c.id})">清零</button>
                             <button class="btn-action delete" onclick="deleteCounter(${c.id})">删除</button>
                         </div>
@@ -371,70 +269,127 @@
                 </div>
                 `;
             }).join('');
+
+            // 初始化或重置拖拽
+            initSortable();
         }
+
+        // 初始化拖拽排序功能
+        function initSortable() {
+            if (sortableInstance) sortableInstance.destroy();
+            if (typeof Sortable !== 'undefined') {
+                sortableInstance = new Sortable(listContainer, {
+                    animation: 150,
+                    delay: 200, // 核心：长按 200 毫秒后激活拖拽
+                    delayOnTouchOnly: true, // 仅在触摸屏上开启长按，鼠标直接拖拽
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    onEnd: function (evt) {
+                        const oldIndex = evt.oldIndex;
+                        const newIndex = evt.newIndex;
+                        if (oldIndex !== newIndex) {
+                            // 在数据数组中移动元素
+                            const movedItem = counters.splice(oldIndex, 1)[0];
+                            counters.splice(newIndex, 0, movedItem);
+                            // 仅保存数据，不触发完整重新渲染，以免打断正在进行的 UI 动画
+                            saveAndRender(true);
+                        }
+                    }
+                });
+            }
+        }
+
+        // ---------- 倒计时逻辑 ----------
+        function formatTime(ms) {
+            const totalSec = Math.floor(ms / 1000);
+            const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+            const s = (totalSec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateTimers() {
+            const now = Date.now();
+            counters.forEach(c => {
+                if (!c.timerMinutes) return;
+                const el = document.getElementById(`timer-${c.id}`);
+                if (!el) return;
+
+                if (!c.lastUpdated) {
+                    el.innerText = '等待首次点击';
+                    el.className = 'timer-badge idle';
+                    return;
+                }
+
+                const elapsed = now - c.lastUpdated;
+                const limitMs = c.timerMinutes * 60 * 1000;
+                const remainMs = limitMs - elapsed;
+
+                if (remainMs <= 0) {
+                    el.innerText = '⚠️ 已超时';
+                    el.className = 'timer-badge danger';
+                } else if (remainMs <= 60000) { 
+                    el.innerText = '⏳ ' + formatTime(remainMs);
+                    el.className = 'timer-badge warning';
+                } else {
+                    el.innerText = '⏳ ' + formatTime(remainMs);
+                    el.className = 'timer-badge normal';
+                }
+            });
+        }
+        setInterval(updateTimers, 1000);
 
         // ---------- 弹窗逻辑 ----------
         function openModal(id = null) {
             document.getElementById('m-id').value = id || '';
             
             if (id) {
-                // 编辑模式
                 const c = counters.find(x => x.id === id);
                 document.getElementById('modal-title').innerText = '编辑设置';
                 document.getElementById('m-name').value = c.name;
-                document.getElementById('m-icon').value = c.icon || '';
+                currentSelectedIcon = c.icon || '';
                 document.getElementById('m-step').value = c.step;
                 document.getElementById('m-target').value = c.target || '';
+                document.getElementById('m-timer').value = c.timerMinutes || '';
             } else {
-                // 新增模式
                 document.getElementById('modal-title').innerText = '添加计数器';
                 document.getElementById('m-name').value = '';
-                document.getElementById('m-icon').value = '';
+                currentSelectedIcon = '';
                 document.getElementById('m-step').value = '1';
                 document.getElementById('m-target').value = '';
+                document.getElementById('m-timer').value = '';
             }
             
+            renderEmojiGrid();
             modalOverlay.style.display = 'flex';
         }
 
-        function closeModal() {
-            modalOverlay.style.display = 'none';
-        }
+        function closeModal() { modalOverlay.style.display = 'none'; }
 
         function saveModal() {
             const id = document.getElementById('m-id').value;
             const name = document.getElementById('m-name').value.trim();
-            const icon = document.getElementById('m-icon').value.trim();
             const step = parseInt(document.getElementById('m-step').value) || 1;
             const targetVal = document.getElementById('m-target').value;
             const target = targetVal ? parseInt(targetVal) : null;
+            const timerVal = document.getElementById('m-timer').value;
+            const timerMinutes = timerVal ? parseFloat(timerVal) : 0;
 
-            if (!name) {
-                alert("请输入名称");
-                return;
-            }
+            if (!name) return alert("请输入名称");
 
             if (id) {
-                // 更新现有
                 const index = counters.findIndex(c => c.id == id);
                 if (index !== -1) {
                     counters[index].name = name;
-                    counters[index].icon = icon;
+                    counters[index].icon = currentSelectedIcon;
                     counters[index].step = step;
                     counters[index].target = target;
+                    counters[index].timerMinutes = timerMinutes;
                 }
             } else {
-                // 新增
                 counters.push({
-                    id: Date.now(),
-                    name: name,
-                    icon: icon,
-                    step: step,
-                    target: target,
-                    count: 0
+                    id: Date.now(), name, icon: currentSelectedIcon, step, target, count: 0, timerMinutes, lastUpdated: 0
                 });
             }
-
             saveAndRender();
             closeModal();
         }
@@ -444,6 +399,7 @@
             const index = counters.findIndex(c => c.id === id);
             if (index !== -1) {
                 counters[index].count += counters[index].step;
+                counters[index].lastUpdated = Date.now();
                 saveAndRender();
             }
         }
@@ -453,31 +409,29 @@
             if (index !== -1) {
                 if (confirm(`确定要将【${counters[index].name}】清零吗？`)) {
                     counters[index].count = 0;
+                    counters[index].lastUpdated = 0;
                     saveAndRender();
                 }
             }
         }
 
         function deleteCounter(id) {
-            const index = counters.findIndex(c => c.id === id);
-            if (index !== -1) {
-                if (confirm(`删除后不可恢复，确定要删除【${counters[index].name}】吗？`)) {
-                    counters = counters.filter(c => c.id !== id);
-                    saveAndRender();
-                }
+            if (confirm(`删除后不可恢复，确定要删除吗？`)) {
+                counters = counters.filter(c => c.id !== id);
+                saveAndRender();
             }
         }
 
         function resetAll() {
             if (counters.length === 0) return;
             if (confirm(`⚠️ 警告：这会将所有计数器的数值全部清零！确定要继续吗？`)) {
-                counters.forEach(c => c.count = 0);
+                counters.forEach(c => { c.count = 0; c.lastUpdated = 0; });
                 saveAndRender();
             }
         }
 
-        // 首次加载渲染
         render();
+        updateTimers();
     </script>
 </body>
 </html>
