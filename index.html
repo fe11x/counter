@@ -1,79 +1,253 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 让网页在手机上全屏显示，像个真 App -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>我的计数器</title>
     <style>
+        :root {
+            /* 模仿 iOS 系统颜色 */
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #000000;
+            --text-sub: #8E8E93;
+            --blue: #007AFF;
+            --red: #FF3B30;
+        }
+
         body {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
-            background-color: #f0f0f5;
-            font-family: -apple-system, sans-serif;
-            /* 防止用户点击时选中文本 */
-            user-select: none; 
+            padding: 0;
+            background-color: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            /* 禁止选中文本和长按高亮，体验更像 App */
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
             -webkit-user-select: none;
         }
-        #number {
-            font-size: 100px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 50px;
+
+        /* 顶部导航栏 */
+        .header {
+            padding: 60px 20px 15px;
+            background: var(--card-bg);
+            font-size: 34px;
+            font-weight: 700;
+            border-bottom: 1px solid #E5E5EA;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
-        .btn {
-            font-size: 24px;
-            padding: 20px 60px;
-            background-color: #007aff;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,122,255,0.3);
-        }
-        /* 增加一个简单的重置按钮 */
-        .reset {
-            margin-top: 30px;
-            font-size: 16px;
-            color: #888;
+
+        .add-btn {
+            font-size: 28px;
+            color: var(--blue);
             background: none;
             border: none;
+            padding: 0;
+            cursor: pointer;
+            font-weight: 400;
+        }
+
+        /* 计数器列表区域 */
+        .list-container {
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        /* 单个计数器卡片 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .info-area {
+            flex: 1;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .btn-action {
+            font-size: 14px;
+            color: var(--blue);
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .btn-action.delete {
+            color: var(--red);
+        }
+
+        .count-number {
+            font-size: 40px;
+            font-weight: bold;
+            color: var(--text-main);
+            text-align: right;
+            min-width: 60px;
+            margin-right: 20px;
+        }
+
+        /* +1 按钮 */
+        .tap-btn {
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            width: 60px;
+            height: 60px;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,122,255,0.3);
+        }
+
+        .tap-btn:active {
+            opacity: 0.7;
+            transform: scale(0.95);
+            transition: all 0.1s;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-sub);
+            margin-top: 80px;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
 
-    <div id="number">0</div>
-    <button class="btn" onclick="addOne()">点击 +1</button>
-    <button class="reset" onclick="reset()">重置</button>
+    <div class="header">
+        计数器
+        <button class="add-btn" onclick="addCounter()">＋</button>
+    </div>
+
+    <div class="list-container" id="counter-list">
+        <!-- 这里的卡片会由 JS 动态生成 -->
+    </div>
 
     <script>
-        let count = 0;
-        const numberDisplay = document.getElementById('number');
+        // 核心数据结构：从 localStorage 读取，如果没有则初始化为空数组
+        let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
 
-        // 页面加载时，从手机本地缓存读取之前的数字
-        if (localStorage.getItem('myCount')) {
-            count = parseInt(localStorage.getItem('myCount'));
-            numberDisplay.innerText = count;
+        // 绑定界面容器
+        const listContainer = document.getElementById('counter-list');
+
+        // 保存数据并重新渲染页面
+        function saveAndRender() {
+            localStorage.setItem('my_multi_counters', JSON.stringify(counters));
+            render();
         }
 
-        function addOne() {
-            count++;
-            numberDisplay.innerText = count;
-            // 存入手机缓存，杀掉后台数字也不丢
-            localStorage.setItem('myCount', count);
+        // 渲染页面函数
+        function render() {
+            if (counters.length === 0) {
+                listContainer.innerHTML = '<div class="empty-state">暂无计数器<br><br>点击右上角 ＋ 添加</div>';
+                return;
+            }
+
+            // 循环遍历 counters 数组，生成对应的 HTML
+            listContainer.innerHTML = counters.map(c => `
+                <div class="card">
+                    <div class="info-area">
+                        <div class="title">${c.name}</div>
+                        <div class="actions">
+                            <button class="btn-action" onclick="editCounter(${c.id})">重命名</button>
+                            <button class="btn-action" onclick="resetCounter(${c.id})">清零</button>
+                            <button class="btn-action delete" onclick="deleteCounter(${c.id})">删除</button>
+                        </div>
+                    </div>
+                    <div class="count-number">${c.count}</div>
+                    <button class="tap-btn" onclick="increment(${c.id})">＋</button>
+                </div>
+            `).join('');
         }
 
-        function reset() {
-            count = 0;
-            numberDisplay.innerText = count;
-            localStorage.setItem('myCount', count);
+        // 添加计数器
+        function addCounter() {
+            // 在手机上，prompt 会弹出一个原生的输入框
+            const name = prompt("给新计数器起个名字（比如：喝水、俯卧撑）：", "新计数器");
+            if (name !== null && name.trim() !== "") {
+                counters.push({
+                    id: Date.now(), // 用当前时间戳作为唯一ID
+                    name: name.trim(),
+                    count: 0
+                });
+                saveAndRender();
+            }
         }
+
+        // 增加计数
+        function increment(id) {
+            const index = counters.findIndex(c => c.id === id);
+            if (index !== -1) {
+                counters[index].count += 1;
+                saveAndRender();
+            }
+        }
+
+        // 重命名计数器
+        function editCounter(id) {
+            const index = counters.findIndex(c => c.id === id);
+            if (index !== -1) {
+                const newName = prompt("请输入新名称：", counters[index].name);
+                if (newName !== null && newName.trim() !== "") {
+                    counters[index].name = newName.trim();
+                    saveAndRender();
+                }
+            }
+        }
+
+        // 清零计数器
+        function resetCounter(id) {
+            const index = counters.findIndex(c => c.id === id);
+            if (index !== -1) {
+                // confirm 会在手机上弹出系统原生的确认框
+                if (confirm(`确定要将【${counters[index].name}】清零吗？`)) {
+                    counters[index].count = 0;
+                    saveAndRender();
+                }
+            }
+        }
+
+        // 删除计数器
+        function deleteCounter(id) {
+            const index = counters.findIndex(c => c.id === id);
+            if (index !== -1) {
+                if (confirm(`删除后不可恢复，确定要删除【${counters[index].name}】吗？`)) {
+                    // 过滤掉被删除的项
+                    counters = counters.filter(c => c.id !== id);
+                    saveAndRender();
+                }
+            }
+        }
+
+        // 页面首次加载时执行渲染
+        render();
     </script>
 </body>
 </html>
