@@ -6,7 +6,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>我的计数器</title>
-    <!-- 引入强大的拖拽库 SortableJS，专为移动端触摸优化 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         :root {
@@ -27,38 +26,37 @@
             -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
         }
 
-        /* 顶部导航栏 */
+        /* 顶部导航栏 (收窄) */
         .header {
-            padding: 60px 20px 15px; background: var(--card-bg); font-size: 30px; font-weight: 700;
+            padding: 48px 16px 10px; background: var(--card-bg); font-size: 24px; font-weight: 700;
             border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10;
         }
-        .header-btn { font-size: 16px; color: var(--blue); background: none; border: none; padding: 8px 0; cursor: pointer; }
-        .add-btn { font-size: 28px; font-weight: 400; padding: 0; }
-        .header-left { display: flex; align-items: center; gap: 15px; }
+        .header-btn { font-size: 15px; color: var(--blue); background: none; border: none; padding: 4px 0; cursor: pointer; }
+        .add-btn { font-size: 24px; font-weight: 400; padding: 0; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
 
         /* 列表区域 */
-        .list-container { padding: 20px; padding-bottom: 10px; }
-        .tip-text { text-align: center; color: var(--text-sub); font-size: 13px; margin-bottom: 20px; }
+        .list-container { padding: 12px 16px; padding-bottom: 100px; }
+        .tip-text { text-align: center; color: var(--text-sub); font-size: 12px; margin-bottom: 12px; }
 
-        /* 卡片设计 */
+        /* 卡片设计 (收窄高密度) */
         .card {
-            background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center;
+            background: var(--card-bg); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.04); display: flex; align-items: center;
             transition: transform 0.2s, box-shadow 0.2s;
         }
         
-        /* 拖拽时的样式 */
         .sortable-ghost { opacity: 0.4; }
-        .sortable-drag { transform: scale(1.02); box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 99; }
+        .sortable-drag { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.12); z-index: 99; }
 
-        .card-icon { font-size: 36px; margin-right: 16px; width: 50px; text-align: center; }
+        .card-icon { font-size: 26px; margin-right: 12px; width: 34px; text-align: center; }
         .info-area { flex: 1; min-width: 0; }
-        .title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
-        .title { font-size: 18px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-        .step-badge { font-size: 12px; background: var(--bg); color: var(--text-sub); padding: 2px 6px; border-radius: 4px; }
+        .title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+        .title { font-size: 16px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .step-badge { font-size: 11px; background: var(--bg); color: var(--text-sub); padding: 2px 6px; border-radius: 4px; }
 
         /* 倒计时徽章 */
-        .timer-badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-variant-numeric: tabular-nums; transition: all 0.3s ease; }
+        .timer-badge { font-size: 11px; padding: 2px 6px; border-radius: 8px; font-weight: 600; font-variant-numeric: tabular-nums; transition: all 0.3s ease; }
         .timer-badge.idle { background: var(--bg); color: var(--text-sub); }
         .timer-badge.normal { background: #E5F0FF; color: var(--blue); }
         .timer-badge.warning { background: #FFF3E0; color: var(--orange); }
@@ -66,49 +64,72 @@
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
 
         /* 进度条 */
-        .progress-container { margin-top: 8px; margin-bottom: 8px; }
-        .progress-text { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; display: flex; justify-content: space-between; }
-        .progress-track { height: 6px; background-color: var(--bg); border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; background-color: var(--blue); border-radius: 3px; transition: width 0.3s ease; }
-        .progress-fill.success { background-color: var(--green); }
+        .progress-container { margin-top: 4px; margin-bottom: 4px; }
+        .progress-text { font-size: 11px; color: var(--text-sub); margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .progress-track { height: 5px; background-color: var(--bg); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
 
         /* 底部操作区 */
-        .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 10px; }
-        .btn-action { font-size: 14px; color: var(--blue); background: none; border: none; padding: 4px 0; cursor: pointer; }
+        .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px; }
+        .btn-action { font-size: 13px; color: var(--blue); background: none; border: none; padding: 2px 0; cursor: pointer; }
         .btn-action.delete { color: var(--red); }
 
-        .count-area { text-align: right; margin-left: 10px; }
-        .count-number { font-size: 36px; font-weight: bold; color: var(--text-main); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
-        .tap-btn { background: var(--blue); color: white; border: none; border-radius: 14px; width: 65px; height: 50px; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,122,255,0.3); }
+        .count-area { text-align: right; margin-left: 8px; }
+        .count-number { font-size: 26px; font-weight: bold; color: var(--text-main); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+        .tap-btn { color: white; border: none; border-radius: 12px; width: 54px; height: 44px; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .tap-btn:active { opacity: 0.7; transform: scale(0.95); transition: all 0.1s; }
-        .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 16px; }
+        .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 15px; }
 
         /* 模态框 */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
-        .modal { background: var(--card-bg); width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; border-radius: 16px; padding: 24px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: popIn 0.25s ease-out; }
+        .modal { background: var(--card-bg); width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; border-radius: 16px; padding: 20px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: popIn 0.2s ease-out; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal h3 { margin: 0 0 20px 0; text-align: center; font-size: 18px; }
+        .modal h3 { margin: 0 0 16px 0; text-align: center; font-size: 17px; }
 
-        .form-group { margin-bottom: 16px; display: flex; flex-direction: column; }
-        .form-group label { font-size: 14px; color: var(--text-sub); margin-bottom: 8px; }
-        .form-group input { background: var(--bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 16px; outline: none; -webkit-appearance: none; }
+        .form-group { margin-bottom: 14px; display: flex; flex-direction: column; }
+        .form-group label { font-size: 13px; color: var(--text-sub); margin-bottom: 6px; }
+        .form-group input { background: var(--bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 15px; outline: none; -webkit-appearance: none; }
         .form-group input:focus { border-color: var(--blue); }
-        .form-row { display: flex; gap: 12px; }
+        .form-row { display: flex; gap: 10px; }
         .form-row .form-group { flex: 1; }
 
-        /* 图标选择器网格 */
-        .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-        .icon-item { 
-            font-size: 24px; text-align: center; padding: 8px 0; background: var(--bg); 
-            border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
-        }
+        /* 图标与颜色选择器网格 */
+        .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+        .icon-item { font-size: 22px; text-align: center; padding: 6px 0; background: var(--bg); border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
         .icon-item.selected { border-color: var(--blue); background: #E5F0FF; transform: scale(1.1); }
-        .icon-item.none { font-size: 14px; color: var(--text-sub); display: flex; align-items: center; justify-content: center; }
+        .icon-item.none { font-size: 13px; color: var(--text-sub); display: flex; align-items: center; justify-content: center; }
+        
+        .color-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .color-item { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; box-sizing: border-box; transition: transform 0.2s; }
+        .color-item.selected { transform: scale(1.15); box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--text-sub); }
 
-        .modal-btns { display: flex; gap: 12px; margin-top: 20px; }
-        .modal-btn { flex: 1; padding: 12px; border-radius: 10px; font-size: 16px; border: none; font-weight: 600; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+        .modal-btn { flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; border: none; font-weight: 600; }
         .modal-btn.cancel { background: var(--bg); color: var(--text-main); }
         .modal-btn.save { background: var(--blue); color: white; }
+
+        /* 统计面板增强样式 */
+        .stats-summary-box { background: var(--bg); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+        .stats-grand-total { font-size: 15px; color: var(--text-sub); text-align: center; margin-bottom: 12px; }
+        .stats-grand-total span { font-size: 28px; font-weight: bold; color: var(--text-main); display: block; margin-top: 4px; }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stats-card { background: var(--card-bg); padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .stats-name-col { display: flex; align-items: center; gap: 6px; font-size: 13px; overflow: hidden; }
+        .stats-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stats-total { font-weight: bold; font-size: 15px; }
+
+        .section-title { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; }
+
+        /* 统计历史列表项 */
+        .stat-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .stat-item:last-child { border-bottom: none; }
+        .stat-icon { font-size: 20px; margin-right: 10px; width: 28px; text-align: center; }
+        .stat-info { flex: 1; }
+        .stat-title { font-weight: 600; font-size: 14px; margin-bottom: 2px; color: var(--text-main); }
+        .stat-time { font-size: 11px; color: var(--text-sub); }
+        .stat-target { font-weight: bold; font-size: 16px; }
+        .stats-empty { text-align: center; color: var(--text-sub); padding: 30px 0; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -116,7 +137,7 @@
     <div class="header">
         <div class="header-left">
             <span>计数器</span>
-            <button class="header-btn" onclick="resetAll()">清零全部</button>
+            <button class="header-btn" onclick="openStats()">统计</button>
         </div>
         <button class="header-btn add-btn" onclick="openModal()">＋</button>
     </div>
@@ -127,17 +148,20 @@
         <!-- 动态生成 -->
     </div>
 
-    <!-- 弹窗 -->
+    <!-- 添加/编辑 弹窗 -->
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal">
             <h3 id="modal-title">添加计数器</h3>
             <input type="hidden" id="m-id">
             
             <div class="form-group">
+                <label>选择主题颜色</label>
+                <div class="color-grid" id="color-grid"></div>
+            </div>
+
+            <div class="form-group">
                 <label>选择图标</label>
-                <div class="icon-grid" id="icon-grid">
-                    <!-- JS 动态生成 Emoji 网格 -->
-                </div>
+                <div class="icon-grid" id="icon-grid"></div>
             </div>
 
             <div class="form-group">
@@ -168,49 +192,74 @@
         </div>
     </div>
 
+    <!-- 统计 弹窗 -->
+    <div class="modal-overlay" id="stats-overlay">
+        <div class="modal" style="width: 95%; max-width: 400px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <button class="btn-action delete" onclick="clearStats()">清空记录</button>
+                <h3 style="margin: 0; font-size: 17px;">数据统计</h3>
+                <button class="btn-action" onclick="closeStats()" style="font-weight: 600;">关闭</button>
+            </div>
+            
+            <div style="max-height: 70vh; overflow-y: auto; padding-bottom: 10px;">
+                <div id="stats-summary-container">
+                    <!-- 汇总数据由 JS 动态生成 -->
+                </div>
+                
+                <div class="section-title">达成历史记录</div>
+                <div id="stats-list">
+                    <!-- 历史列表由 JS 动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 数据初始化
+        const EMOJI_LIST = ['💧','☕','💊','🍎','🏃','🏋️','🧘','📚','💻','🎮','🚬','🚽','🛌','🎯','💰'];
+        const COLOR_LIST = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#5AC8FA', '#8E8E93'];
+        
+        let currentSelectedIcon = '';
+        let currentSelectedColor = COLOR_LIST[0];
+
         let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
         counters = counters.map(c => ({
             ...c, step: c.step || 1, target: c.target || null, icon: c.icon || '',
-            timerMinutes: c.timerMinutes || 0, lastUpdated: c.lastUpdated || 0
+            color: c.color || COLOR_LIST[0], timerMinutes: c.timerMinutes || 0, lastUpdated: c.lastUpdated || 0
         }));
 
         const listContainer = document.getElementById('counter-list');
         const modalOverlay = document.getElementById('modal-overlay');
         const dragTip = document.getElementById('drag-tip');
+        const statsOverlay = document.getElementById('stats-overlay');
 
-        // Emoji 预设列表
-        const EMOJI_LIST = ['💧','☕','💊','🍎','🏃','🏋️','🧘','📚','💻','🎮','🚬','🚽','🛌','🎯','💰'];
-        let currentSelectedIcon = '';
-
-        // 渲染 Emoji 挑选器
         function renderEmojiGrid() {
             const grid = document.getElementById('icon-grid');
             let html = EMOJI_LIST.map(emoji => `
                 <div class="icon-item ${currentSelectedIcon === emoji ? 'selected' : ''}" 
                      onclick="selectIcon('${emoji}')">${emoji}</div>
             `).join('');
-            
-            // 加入一个“无图标”的选项
             html += `<div class="icon-item none ${currentSelectedIcon === '' ? 'selected' : ''}" 
                           onclick="selectIcon('')">无</div>`;
             grid.innerHTML = html;
         }
 
-        function selectIcon(emoji) {
-            currentSelectedIcon = emoji;
-            renderEmojiGrid(); // 重新渲染以更新高亮状态
+        function renderColorGrid() {
+            const grid = document.getElementById('color-grid');
+            grid.innerHTML = COLOR_LIST.map(c => `
+                <div class="color-item ${currentSelectedColor === c ? 'selected' : ''}" 
+                     style="background-color: ${c};"
+                     onclick="selectColor('${c}')"></div>
+            `).join('');
         }
+
+        function selectIcon(emoji) { currentSelectedIcon = emoji; renderEmojiGrid(); }
+        function selectColor(c) { currentSelectedColor = c; renderColorGrid(); }
 
         let sortableInstance = null;
 
         function saveAndRender(skipRender = false) {
             localStorage.setItem('my_multi_counters', JSON.stringify(counters));
-            if (!skipRender) {
-                render();
-                updateTimers();
-            }
+            if (!skipRender) { render(); updateTimers(); }
         }
 
         function render() {
@@ -224,10 +273,8 @@
 
             listContainer.innerHTML = counters.map((c) => {
                 let progressHtml = '';
-                let isSuccess = false;
                 if (c.target && c.target > 0) {
                     const percent = Math.min((c.count / c.target) * 100, 100);
-                    isSuccess = c.count >= c.target;
                     progressHtml = `
                         <div class="progress-container">
                             <div class="progress-text">
@@ -235,14 +282,14 @@
                                 <span>${c.count} / ${c.target}</span>
                             </div>
                             <div class="progress-track">
-                                <div class="progress-fill ${isSuccess ? 'success' : ''}" style="width: ${percent}%"></div>
+                                <div class="progress-fill" style="width: ${percent}%; background-color: ${c.color}"></div>
                             </div>
                         </div>
                     `;
                 }
 
                 const timerHtml = c.timerMinutes > 0 
-                    ? `<span id="timer-${c.id}" class="timer-badge idle">加载中...</span>` : '';
+                    ? `<span id="timer-${c.id}" class="timer-badge idle">加载中</span>` : '';
                 const iconHtml = c.icon ? `<div class="card-icon">${c.icon}</div>` : '';
 
                 return `
@@ -251,7 +298,7 @@
                     <div class="info-area">
                         <div class="title-row">
                             <div class="title">${c.name}</div>
-                            ${c.step !== 1 ? `<div class="step-badge">步长 +${c.step}</div>` : ''}
+                            ${c.step !== 1 ? `<div class="step-badge">+${c.step}</div>` : ''}
                             ${timerHtml}
                         </div>
                         ${progressHtml}
@@ -263,35 +310,27 @@
                     </div>
                     
                     <div class="count-area">
-                        <div class="count-number" style="color: ${isSuccess ? 'var(--green)' : 'var(--text-main)'}">${c.count}</div>
-                        <button class="tap-btn" onclick="increment(${c.id})">＋</button>
+                        <div class="count-number">${c.count}</div>
+                        <button class="tap-btn" style="background-color: ${c.color}" onclick="increment(${c.id})">＋</button>
                     </div>
                 </div>
                 `;
             }).join('');
 
-            // 初始化或重置拖拽
             initSortable();
         }
 
-        // 初始化拖拽排序功能
         function initSortable() {
             if (sortableInstance) sortableInstance.destroy();
             if (typeof Sortable !== 'undefined') {
                 sortableInstance = new Sortable(listContainer, {
-                    animation: 150,
-                    delay: 200, // 核心：长按 200 毫秒后激活拖拽
-                    delayOnTouchOnly: true, // 仅在触摸屏上开启长按，鼠标直接拖拽
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
+                    animation: 150, delay: 200, delayOnTouchOnly: true,
+                    ghostClass: 'sortable-ghost', dragClass: 'sortable-drag',
                     onEnd: function (evt) {
-                        const oldIndex = evt.oldIndex;
-                        const newIndex = evt.newIndex;
+                        const oldIndex = evt.oldIndex; const newIndex = evt.newIndex;
                         if (oldIndex !== newIndex) {
-                            // 在数据数组中移动元素
                             const movedItem = counters.splice(oldIndex, 1)[0];
                             counters.splice(newIndex, 0, movedItem);
-                            // 仅保存数据，不触发完整重新渲染，以免打断正在进行的 UI 动画
                             saveAndRender(true);
                         }
                     }
@@ -315,9 +354,7 @@
                 if (!el) return;
 
                 if (!c.lastUpdated) {
-                    el.innerText = '等待首次点击';
-                    el.className = 'timer-badge idle';
-                    return;
+                    el.innerText = '等待点击'; el.className = 'timer-badge idle'; return;
                 }
 
                 const elapsed = now - c.lastUpdated;
@@ -325,14 +362,11 @@
                 const remainMs = limitMs - elapsed;
 
                 if (remainMs <= 0) {
-                    el.innerText = '⚠️ 已超时';
-                    el.className = 'timer-badge danger';
+                    el.innerText = '已超时'; el.className = 'timer-badge danger';
                 } else if (remainMs <= 60000) { 
-                    el.innerText = '⏳ ' + formatTime(remainMs);
-                    el.className = 'timer-badge warning';
+                    el.innerText = formatTime(remainMs); el.className = 'timer-badge warning';
                 } else {
-                    el.innerText = '⏳ ' + formatTime(remainMs);
-                    el.className = 'timer-badge normal';
+                    el.innerText = formatTime(remainMs); el.className = 'timer-badge normal';
                 }
             });
         }
@@ -341,12 +375,12 @@
         // ---------- 弹窗逻辑 ----------
         function openModal(id = null) {
             document.getElementById('m-id').value = id || '';
-            
             if (id) {
                 const c = counters.find(x => x.id === id);
                 document.getElementById('modal-title').innerText = '编辑设置';
                 document.getElementById('m-name').value = c.name;
                 currentSelectedIcon = c.icon || '';
+                currentSelectedColor = c.color || COLOR_LIST[0];
                 document.getElementById('m-step').value = c.step;
                 document.getElementById('m-target').value = c.target || '';
                 document.getElementById('m-timer').value = c.timerMinutes || '';
@@ -354,12 +388,12 @@
                 document.getElementById('modal-title').innerText = '添加计数器';
                 document.getElementById('m-name').value = '';
                 currentSelectedIcon = '';
+                currentSelectedColor = COLOR_LIST[0];
                 document.getElementById('m-step').value = '1';
                 document.getElementById('m-target').value = '';
                 document.getElementById('m-timer').value = '';
             }
-            
-            renderEmojiGrid();
+            renderEmojiGrid(); renderColorGrid();
             modalOverlay.style.display = 'flex';
         }
 
@@ -379,28 +413,39 @@
             if (id) {
                 const index = counters.findIndex(c => c.id == id);
                 if (index !== -1) {
-                    counters[index].name = name;
-                    counters[index].icon = currentSelectedIcon;
-                    counters[index].step = step;
-                    counters[index].target = target;
-                    counters[index].timerMinutes = timerMinutes;
+                    counters[index].name = name; counters[index].icon = currentSelectedIcon;
+                    counters[index].color = currentSelectedColor; counters[index].step = step;
+                    counters[index].target = target; counters[index].timerMinutes = timerMinutes;
                 }
             } else {
                 counters.push({
-                    id: Date.now(), name, icon: currentSelectedIcon, step, target, count: 0, timerMinutes, lastUpdated: 0
+                    id: Date.now(), name, icon: currentSelectedIcon, color: currentSelectedColor,
+                    step, target, count: 0, timerMinutes, lastUpdated: 0
                 });
             }
-            saveAndRender();
-            closeModal();
+            saveAndRender(); closeModal();
         }
 
-        // ---------- 核心操作逻辑 ----------
         function increment(id) {
             const index = counters.findIndex(c => c.id === id);
             if (index !== -1) {
                 counters[index].count += counters[index].step;
                 counters[index].lastUpdated = Date.now();
                 saveAndRender();
+
+                if (counters[index].target && counters[index].count >= counters[index].target) {
+                    setTimeout(() => {
+                        const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
+                        history.unshift({
+                            id: Date.now(), counterId: counters[index].id, name: counters[index].name,
+                            icon: counters[index].icon, color: counters[index].color, target: counters[index].target, time: Date.now()
+                        });
+                        localStorage.setItem('my_counters_history', JSON.stringify(history));
+
+                        alert(`🎉 恭喜！【${counters[index].name}】已达成目标（${counters[index].target}）！\n进度已自动记录并清零。`);
+                        counters[index].count = 0; counters[index].lastUpdated = 0; saveAndRender();
+                    }, 50);
+                }
             }
         }
 
@@ -408,25 +453,105 @@
             const index = counters.findIndex(c => c.id === id);
             if (index !== -1) {
                 if (confirm(`确定要将【${counters[index].name}】清零吗？`)) {
-                    counters[index].count = 0;
-                    counters[index].lastUpdated = 0;
-                    saveAndRender();
+                    counters[index].count = 0; counters[index].lastUpdated = 0; saveAndRender();
                 }
             }
         }
 
         function deleteCounter(id) {
             if (confirm(`删除后不可恢复，确定要删除吗？`)) {
-                counters = counters.filter(c => c.id !== id);
-                saveAndRender();
+                counters = counters.filter(c => c.id !== id); saveAndRender();
             }
         }
 
-        function resetAll() {
-            if (counters.length === 0) return;
-            if (confirm(`⚠️ 警告：这会将所有计数器的数值全部清零！确定要继续吗？`)) {
-                counters.forEach(c => { c.count = 0; c.lastUpdated = 0; });
-                saveAndRender();
+        // ---------- 统计面板逻辑 ----------
+        function openStats() {
+            const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
+            
+            // 1. 计算总数值：历史达成总和 + 当前正在进行的总和
+            let grandTotal = 0;
+            const statsMap = {}; // 用来按名称聚合每个 counter 的数据
+            
+            // 累加历史记录
+            history.forEach(item => {
+                grandTotal += item.target;
+                const key = item.name;
+                if (!statsMap[key]) statsMap[key] = { icon: item.icon, color: item.color, total: 0 };
+                statsMap[key].total += item.target;
+            });
+            
+            // 累加当前活跃计数器里的未达成/无目标数值
+            counters.forEach(c => {
+                grandTotal += c.count;
+                const key = c.name;
+                if (!statsMap[key]) statsMap[key] = { icon: c.icon, color: c.color, total: 0 };
+                statsMap[key].total += c.count;
+            });
+
+            // 渲染汇总区域
+            const summaryEl = document.getElementById('stats-summary-container');
+            if (grandTotal === 0) {
+                summaryEl.innerHTML = '<div class="stats-empty" style="padding: 10px 0;">暂无任何累计数据</div>';
+            } else {
+                // 将对象转为数组并按总数从大到小排序
+                const sortedKeys = Object.keys(statsMap).sort((a,b) => statsMap[b].total - statsMap[a].total);
+                const cardsHtml = sortedKeys.map(k => {
+                    const s = statsMap[k];
+                    const iconHtml = s.icon ? `<span style="font-size: 16px;">${s.icon}</span>` : '';
+                    return `
+                        <div class="stats-card">
+                            <div class="stats-name-col">${iconHtml}<span class="stats-name">${k}</span></div>
+                            <div class="stats-total" style="color: ${s.color}">${s.total}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                summaryEl.innerHTML = `
+                    <div class="stats-summary-box">
+                        <div class="stats-grand-total">累计点击总数<span>${grandTotal}</span></div>
+                        <div class="section-title">各项目总计分布</div>
+                        <div class="stats-grid">
+                            ${cardsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 2. 渲染历史记录列表
+            const listEl = document.getElementById('stats-list');
+            if (history.length === 0) {
+                listEl.innerHTML = '<div class="stats-empty" style="padding: 20px 0;">暂无达成历史</div>';
+            } else {
+                listEl.innerHTML = history.map(item => {
+                    const date = new Date(item.time);
+                    const timeStr = `${date.getMonth()+1}月${date.getDate()}日 ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+                    const iconHtml = item.icon ? `<div class="stat-icon">${item.icon}</div>` : '';
+                    return `
+                        <div class="stat-item">
+                            ${iconHtml}
+                            <div class="stat-info">
+                                <div class="stat-title">${item.name}</div>
+                                <div class="stat-time">${timeStr}</div>
+                            </div>
+                            <div class="stat-target" style="color: ${item.color || 'var(--blue)'}">
+                                +${item.target}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            statsOverlay.style.display = 'flex';
+        }
+
+        function closeStats() { statsOverlay.style.display = 'none'; }
+
+        function clearStats() {
+            const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
+            if (history.length === 0) return;
+            if (confirm("确定要清空所有达成历史记录吗？（当前面板的活跃计数不会被清零）")) {
+                localStorage.setItem('my_counters_history', JSON.stringify([]));
+                openStats(); // 重新渲染刷新
             }
         }
 
