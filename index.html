@@ -102,9 +102,14 @@
             transition: transform 0.1s ease, box-shadow 0.1s ease;
         }
         .compact-card:active { transform: scale(0.92); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        /* 黑色遮罩层，让白色数字在任何图片背景上都清晰可见 */
-        .compact-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.45); z-index: 1; transition: background 0.2s; }
-        .compact-card:active .compact-overlay { background: rgba(0,0,0,0.65); } /* 按下时遮罩加深反馈 */
+        
+        /* 颜色混合遮罩层：利用你选的主题色对图片进行染色，同时保持足够的文字对比度 */
+        .compact-overlay { 
+            position: absolute; inset: 0; z-index: 1; transition: opacity 0.2s;
+            /* 默认使用黑色半透明渐变兜底 */
+            background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%);
+        }
+        .compact-card:active .compact-overlay { opacity: 0.8; } /* 按下时稍微加深反馈 */
         
         .compact-count { position: relative; z-index: 2; font-size: 54px; font-weight: 800; color: #FFF; text-shadow: 0 2px 12px rgba(0,0,0,0.6); font-variant-numeric: tabular-nums; }
         .compact-name { position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 2; color: rgba(255,255,255,0.95); font-size: 14px; font-weight: 600; text-shadow: 0 1px 6px rgba(0,0,0,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
@@ -412,6 +417,22 @@
             updateHeaderTodayClicks();
         }
 
+        // 将 Hex 颜色转换为带有透明度的 rgba
+        function hexToRgba(hex, alpha) {
+            let r = 0, g = 0, b = 0;
+            // 处理 3 位或 6 位的 hex
+            if (hex.length === 4) {
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+            } else if (hex.length === 7) {
+                r = parseInt(hex[1] + hex[2], 16);
+                g = parseInt(hex[3] + hex[4], 16);
+                b = parseInt(hex[5] + hex[6], 16);
+            }
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
         function render() {
             // 清除旧的列数类
             listContainer.classList.remove('compact', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4');
@@ -440,6 +461,11 @@
                         ? `background-image: url('${c.icon}');` 
                         : `background-color: ${c.color};`; 
                     
+                    // 为该卡片动态生成混合了其设定颜色的遮罩渐变
+                    const colorTop = hexToRgba(c.color, 0.2);   // 顶部极浅染色
+                    const colorBottom = hexToRgba(c.color, 0.75); // 底部深染色以衬托白色文字
+                    const overlayStyle = `background: linear-gradient(to bottom, ${colorTop} 0%, ${colorBottom} 100%);`;
+
                     let compactProgress = '';
                     if (c.target && c.target > 0) {
                         const percent = Math.min((c.count / c.target) * 100, 100);
@@ -456,7 +482,7 @@
 
                     return `
                     <div class="compact-card" data-id="${c.id}" style="${bgStyle}" onclick="increment(${c.id})">
-                        <div class="compact-overlay"></div>
+                        <div class="compact-overlay" style="${overlayStyle}"></div>
                         ${compactAlert}
                         <div class="compact-count" style="font-size:${countFontSize}">${c.count}</div>
                         ${c.name ? `<div class="compact-name" style="font-size:${nameFontSize}">${c.name}</div>` : ''}
