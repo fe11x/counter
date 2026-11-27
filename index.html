@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 加入 viewport-fit=cover，以便完美适配刘海屏和灵动岛的顶部安全区域 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10,16 +9,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         :root {
-            /* 加深背景色至 #E5E5EA (更深的 iOS 灰色)，凸显卡片的白色 */
-            --bg: #E5E5EA;
-            --card-bg: #FFFFFF;
-            --text-main: #000000;
-            --text-sub: #8E8E93;
-            --blue: #007AFF;
-            --red: #FF3B30;
-            --green: #34C759;
-            --orange: #FF9500;
-            --border: #D1D1D6;
+            --bg: #E5E5EA; --card-bg: #FFFFFF; --text-main: #000000;
+            --text-sub: #8E8E93; --blue: #007AFF; --red: #FF3B30;
+            --green: #34C759; --orange: #FF9500; --border: #D1D1D6;
         }
 
         body {
@@ -28,28 +20,27 @@
             -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
         }
 
-        /* 顶部导航栏 (极致收窄并适配刘海屏) */
+        /* 顶部导航栏 */
         .header {
-            /* 使用 env(safe-area-inset-top) 动态获取刘海高度，而不是写死 48px */
             padding: max(env(safe-area-inset-top), 16px) 14px 8px; 
             background: var(--card-bg); font-size: 22px; font-weight: 700;
             border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10;
         }
-        .header-btn { font-size: 14px; color: var(--blue); background: none; border: none; padding: 4px 0; cursor: pointer; }
-        .add-btn { font-size: 22px; font-weight: 400; padding: 0; }
-        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-btn { font-size: 14px; color: var(--blue); background: none; border: none; padding: 4px; cursor: pointer; font-weight: 600; }
+        .add-btn { font-size: 24px; font-weight: 400; padding: 0 4px; }
+        .header-left { display: flex; align-items: center; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
 
         /* 列表区域 */
         .list-container { padding: 10px 14px; padding-bottom: 100px; }
         .tip-text { text-align: center; color: var(--text-sub); font-size: 11px; margin-bottom: 10px; }
 
-        /* 卡片设计 (终极收窄高密度) */
+        /* == 标准模式 卡片设计 == */
         .card {
             background: var(--card-bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        
         .sortable-ghost { opacity: 0.4; }
         .sortable-drag { transform: scale(1.02); box-shadow: 0 6px 16px rgba(0,0,0,0.12); z-index: 99; }
 
@@ -59,37 +50,58 @@
         .title { font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
         .step-badge { font-size: 10px; background: var(--bg); color: var(--text-sub); padding: 1px 5px; border-radius: 4px; }
 
-        /* 倒计时徽章 */
-        .timer-badge { font-size: 10px; padding: 2px 5px; border-radius: 6px; font-weight: 600; font-variant-numeric: tabular-nums; transition: all 0.3s ease; }
+        .timer-badge { font-size: 10px; padding: 2px 5px; border-radius: 6px; font-weight: 600; font-variant-numeric: tabular-nums; transition: all 0.3s; }
         .timer-badge.idle { background: var(--bg); color: var(--text-sub); }
         .timer-badge.normal { background: #E5F0FF; color: var(--blue); }
         .timer-badge.warning { background: #FFF3E0; color: var(--orange); }
         .timer-badge.danger { background: #FFEBEA; color: var(--red); animation: shake 1s infinite; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
 
-        /* 进度条 */
         .progress-container { margin-top: 3px; margin-bottom: 3px; }
         .progress-text { font-size: 10px; color: var(--text-sub); margin-bottom: 2px; display: flex; justify-content: space-between; }
         .progress-track { height: 4px; background-color: var(--bg); border-radius: 2px; overflow: hidden; }
-        .progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+        .progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
 
-        /* 底部操作区 */
         .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
         .btn-action { font-size: 12px; color: var(--blue); background: none; border: none; padding: 2px 0; cursor: pointer; }
         .btn-action.delete { color: var(--red); }
 
-        .count-area { text-align: right; margin-left: 8px; }
-        .count-number { font-size: 22px; font-weight: bold; color: var(--text-main); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
-        .tap-btn { color: white; border: none; border-radius: 10px; width: 50px; height: 38px; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-        .tap-btn:active { opacity: 0.7; transform: scale(0.95); transition: all 0.1s; }
-        .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 14px; }
+        /* == 合并后的按钮与数字样式 == */
+        .count-area { margin-left: 12px; }
+        .tap-btn { 
+            color: white; border: none; border-radius: 14px; 
+            min-width: 64px; height: 46px; padding: 0 14px;
+            font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums;
+            display: flex; align-items: center; justify-content: center; 
+            transition: all 0.1s ease; cursor: pointer;
+        }
+        .tap-btn:active { opacity: 0.8; transform: scale(0.92); }
 
-        /* 模态框 */
+        /* == 精简模式 (Compact) 网格设计 == */
+        .list-container.compact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-bottom: 80px; }
+        .list-container.compact .card { flex-direction: column; padding: 14px 12px; margin-bottom: 0; align-items: center; text-align: center; }
+        .list-container.compact .card-icon { margin: 0 0 6px 0; font-size: 28px; width: 100%; }
+        .list-container.compact .info-area { width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .list-container.compact .title-row { justify-content: center; width: 100%; margin-bottom: 0; }
+        .list-container.compact .title { font-size: 16px; white-space: normal; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        /* 隐藏非必需元素 */
+        .list-container.compact .actions, 
+        .list-container.compact .progress-container, 
+        .list-container.compact .step-badge,
+        .list-container.compact .timer-badge { display: none; }
+        
+        .list-container.compact .count-area { margin: auto 0 0 0; padding-top: 12px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .list-container.compact .tap-btn { width: 100%; height: 50px; border-radius: 14px; font-size: 26px; }
+
+        .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 14px; grid-column: 1 / -1; }
+
+        /* 模态框通用 */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
         .modal { background: var(--card-bg); width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; border-radius: 14px; padding: 18px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: popIn 0.2s ease-out; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal h3 { margin: 0 0 14px 0; text-align: center; font-size: 16px; }
 
+        /* 表单样式 */
         .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
         .form-group label { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
         .form-group input { background: var(--bg); border: 1px solid var(--border); padding: 8px 10px; border-radius: 8px; font-size: 14px; outline: none; -webkit-appearance: none; }
@@ -97,7 +109,7 @@
         .form-row { display: flex; gap: 8px; }
         .form-row .form-group { flex: 1; }
 
-        /* 图标与颜色选择器网格 */
+        /* 选择器 */
         .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
         .icon-item { font-size: 20px; text-align: center; padding: 6px 0; background: var(--bg); border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
         .icon-item.selected { border-color: var(--blue); background: #E5F0FF; transform: scale(1.1); }
@@ -108,24 +120,29 @@
         .color-item.selected { transform: scale(1.15); box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--text-sub); }
 
         .modal-btns { display: flex; gap: 10px; margin-top: 14px; }
-        .modal-btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; border: none; font-weight: 600; }
+        .modal-btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; border: none; font-weight: 600; cursor: pointer; }
         .modal-btn.cancel { background: var(--bg); color: var(--text-main); }
         .modal-btn.save { background: var(--blue); color: white; }
 
-        /* 统计面板增强样式 */
+        /* 设置面板 Switch 开关 */
+        .settings-item { display: flex; justify-content: space-between; align-items: center; font-size: 15px; margin-bottom: 20px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .3s; border-radius: 26px; }
+        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--green); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* 统计面板样式 */
         .stats-summary-box { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
         .stats-grand-total { font-size: 14px; color: var(--text-sub); text-align: center; margin-bottom: 10px; }
         .stats-grand-total span { font-size: 26px; font-weight: bold; color: var(--text-main); display: block; margin-top: 2px; }
-        
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .stats-card { background: var(--card-bg); padding: 8px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
         .stats-name-col { display: flex; align-items: center; gap: 4px; font-size: 12px; overflow: hidden; }
         .stats-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .stats-total { font-weight: bold; font-size: 14px; }
-
         .section-title { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: 600; }
-
-        /* 统计历史列表项 */
         .stat-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
         .stat-item:last-child { border-bottom: none; }
         .stat-icon { font-size: 18px; margin-right: 8px; width: 24px; text-align: center; }
@@ -133,7 +150,7 @@
         .stat-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; color: var(--text-main); }
         .stat-time { font-size: 10px; color: var(--text-sub); }
         .stat-target { font-weight: bold; font-size: 15px; }
-        .stats-empty { text-align: center; color: var(--text-sub); padding: 30px 0; font-size: 13px; }
+        .stats-empty { text-align: center; color: var(--text-sub); padding: 30px 0; font-size: 13px; grid-column: 1/-1;}
     </style>
 </head>
 <body>
@@ -141,10 +158,16 @@
     <div class="header">
         <div class="header-left">
             <span>计数器</span>
-            <button class="header-btn" onclick="openStats()">统计</button>
         </div>
-        <button class="header-btn add-btn" onclick="openModal()">＋</button>
+        <div class="header-right">
+            <button class="header-btn" onclick="openStats()">统计</button>
+            <button class="header-btn" onclick="openSettings()">设置</button>
+            <button class="header-btn add-btn" onclick="openModal()">＋</button>
+        </div>
     </div>
+
+    <!-- 隐藏的文件上传组件，用于导入数据 -->
+    <input type="file" id="import-file" style="display:none;" accept=".json" onchange="importData(event)">
 
     <div class="tip-text" id="drag-tip" style="display: none;">💡 长按卡片可自由拖拽排序</div>
 
@@ -196,6 +219,35 @@
         </div>
     </div>
 
+    <!-- 设置 弹窗 -->
+    <div class="modal-overlay" id="settings-overlay">
+        <div class="modal" style="width: 85%; max-width: 320px;">
+            <h3>系统设置</h3>
+            
+            <div class="settings-item">
+                <span>精简模式 (双列卡片)</span>
+                <label class="switch">
+                    <input type="checkbox" id="compact-toggle" onchange="toggleCompact()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <hr style="border:0; border-top:1px solid var(--border); margin:18px 0;">
+            
+            <div style="font-size: 13px; color: var(--text-sub); margin-bottom: 12px; text-align: center;">
+                数据备份与恢复 (JSON格式)
+            </div>
+            <div class="modal-btns" style="margin-top:0;">
+                <button class="modal-btn cancel" onclick="exportData()" style="color:var(--text-main)">导出备份</button>
+                <button class="modal-btn save" onclick="document.getElementById('import-file').click()">导入恢复</button>
+            </div>
+            
+            <div class="modal-btns" style="margin-top: 16px;">
+                <button class="modal-btn" style="background:var(--bg); color:var(--text-main);" onclick="closeSettings()">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 统计 弹窗 -->
     <div class="modal-overlay" id="stats-overlay">
         <div class="modal" style="width: 95%; max-width: 400px; padding: 20px;">
@@ -206,31 +258,25 @@
             </div>
             
             <div style="max-height: 70vh; overflow-y: auto; padding-bottom: 10px;">
-                <div id="stats-summary-container">
-                    <!-- 汇总数据由 JS 动态生成 -->
-                </div>
-                
+                <div id="stats-summary-container"></div>
                 <div class="section-title">达成历史记录</div>
-                <div id="stats-list">
-                    <!-- 历史列表由 JS 动态生成 -->
-                </div>
+                <div id="stats-list"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // 更新了 Emoji 列表，23个水果/运动 + 1个“无” = 24个完美铺满4行
         const EMOJI_LIST = [
-            '🍎','🍐','🍊','🍋','🍌','🍉',
-            '🍇','🍓','🍈','🍒','🍑','🍍',
-            '🥥','🥝','🍅','🥑','⚽️','🏀',
-            '🎾','🏓','🏸','🏊','🚴','🏃'
+            '🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🍈','🍒','🍑','🍍',
+            '🥥','🥝','🍅','🥑','⚽️','🏀','🎾','🏓','🏸','🏊','🚴','🏃'
         ];
         const COLOR_LIST = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#5AC8FA', '#8E8E93'];
         
         let currentSelectedIcon = '';
         let currentSelectedColor = COLOR_LIST[0];
 
+        // 状态读取
+        let isCompactMode = localStorage.getItem('my_counter_settings_compact') === 'true';
         let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
         counters = counters.map(c => ({
             ...c, step: c.step || 1, target: c.target || null, icon: c.icon || '',
@@ -241,38 +287,22 @@
         const modalOverlay = document.getElementById('modal-overlay');
         const dragTip = document.getElementById('drag-tip');
         const statsOverlay = document.getElementById('stats-overlay');
+        const settingsOverlay = document.getElementById('settings-overlay');
 
-        function renderEmojiGrid() {
-            const grid = document.getElementById('icon-grid');
-            let html = EMOJI_LIST.map(emoji => `
-                <div class="icon-item ${currentSelectedIcon === emoji ? 'selected' : ''}" 
-                     onclick="selectIcon('${emoji}')">${emoji}</div>
-            `).join('');
-            html += `<div class="icon-item none ${currentSelectedIcon === '' ? 'selected' : ''}" 
-                          onclick="selectIcon('')">无</div>`;
-            grid.innerHTML = html;
-        }
-
-        function renderColorGrid() {
-            const grid = document.getElementById('color-grid');
-            grid.innerHTML = COLOR_LIST.map(c => `
-                <div class="color-item ${currentSelectedColor === c ? 'selected' : ''}" 
-                     style="background-color: ${c};"
-                     onclick="selectColor('${c}')"></div>
-            `).join('');
-        }
-
-        function selectIcon(emoji) { currentSelectedIcon = emoji; renderEmojiGrid(); }
-        function selectColor(c) { currentSelectedColor = c; renderColorGrid(); }
-
-        let sortableInstance = null;
-
+        // ==== 初始化与渲染 ====
         function saveAndRender(skipRender = false) {
             localStorage.setItem('my_multi_counters', JSON.stringify(counters));
             if (!skipRender) { render(); updateTimers(); }
         }
 
         function render() {
+            // 根据设置控制容器类名
+            if (isCompactMode) {
+                listContainer.classList.add('compact');
+            } else {
+                listContainer.classList.remove('compact');
+            }
+
             if (counters.length === 0) {
                 dragTip.style.display = 'none';
                 listContainer.innerHTML = '<div class="empty-state">暂无计数器<br><br>点击右上角 ＋ 添加</div>';
@@ -298,10 +328,10 @@
                     `;
                 }
 
-                const timerHtml = c.timerMinutes > 0 
-                    ? `<span id="timer-${c.id}" class="timer-badge idle">待点击</span>` : '';
+                const timerHtml = c.timerMinutes > 0 ? `<span id="timer-${c.id}" class="timer-badge idle">待点击</span>` : '';
                 const iconHtml = c.icon ? `<div class="card-icon">${c.icon}</div>` : '';
 
+                // 这里合并了数字和 + 按钮：将单独的数字剥离，把 ${c.count} 放入带颜色和发光阴影的按钮中
                 return `
                 <div class="card" data-id="${c.id}">
                     ${iconHtml}
@@ -320,8 +350,11 @@
                     </div>
                     
                     <div class="count-area">
-                        <div class="count-number">${c.count}</div>
-                        <button class="tap-btn" style="background-color: ${c.color}" onclick="increment(${c.id})">＋</button>
+                        <button class="tap-btn" 
+                                style="background-color: ${c.color}; box-shadow: 0 4px 12px ${c.color}66;" 
+                                onclick="increment(${c.id})">
+                            ${c.count}
+                        </button>
                     </div>
                 </div>
                 `;
@@ -330,6 +363,7 @@
             initSortable();
         }
 
+        let sortableInstance = null;
         function initSortable() {
             if (sortableInstance) sortableInstance.destroy();
             if (typeof Sortable !== 'undefined') {
@@ -337,10 +371,9 @@
                     animation: 150, delay: 200, delayOnTouchOnly: true,
                     ghostClass: 'sortable-ghost', dragClass: 'sortable-drag',
                     onEnd: function (evt) {
-                        const oldIndex = evt.oldIndex; const newIndex = evt.newIndex;
-                        if (oldIndex !== newIndex) {
-                            const movedItem = counters.splice(oldIndex, 1)[0];
-                            counters.splice(newIndex, 0, movedItem);
+                        if (evt.oldIndex !== evt.newIndex) {
+                            const movedItem = counters.splice(evt.oldIndex, 1)[0];
+                            counters.splice(evt.newIndex, 0, movedItem);
                             saveAndRender(true);
                         }
                     }
@@ -348,29 +381,22 @@
             }
         }
 
-        // ---------- 倒计时逻辑 ----------
+        // ==== 倒计时系统 ====
         function formatTime(ms) {
             const totalSec = Math.floor(ms / 1000);
-            const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
-            const s = (totalSec % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
+            return `${Math.floor(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}`;
         }
-
         function updateTimers() {
+            if(isCompactMode) return; // 精简模式不显示倒计时徽章
             const now = Date.now();
             counters.forEach(c => {
                 if (!c.timerMinutes) return;
                 const el = document.getElementById(`timer-${c.id}`);
                 if (!el) return;
-
                 if (!c.lastUpdated) {
                     el.innerText = '待点击'; el.className = 'timer-badge idle'; return;
                 }
-
-                const elapsed = now - c.lastUpdated;
-                const limitMs = c.timerMinutes * 60 * 1000;
-                const remainMs = limitMs - elapsed;
-
+                const remainMs = (c.timerMinutes * 60 * 1000) - (now - c.lastUpdated);
                 if (remainMs <= 0) {
                     el.innerText = '已超时'; el.className = 'timer-badge danger';
                 } else if (remainMs <= 60000) { 
@@ -382,116 +408,102 @@
         }
         setInterval(updateTimers, 1000);
 
-        // ---------- 弹窗逻辑 ----------
+        // ==== 编辑器弹窗及表单 ====
+        function renderEmojiGrid() {
+            document.getElementById('icon-grid').innerHTML = EMOJI_LIST.map(emoji => `
+                <div class="icon-item ${currentSelectedIcon === emoji ? 'selected' : ''}" onclick="selectIcon('${emoji}')">${emoji}</div>
+            `).join('') + `<div class="icon-item none ${currentSelectedIcon === '' ? 'selected' : ''}" onclick="selectIcon('')">无</div>`;
+        }
+        function renderColorGrid() {
+            document.getElementById('color-grid').innerHTML = COLOR_LIST.map(c => `
+                <div class="color-item ${currentSelectedColor === c ? 'selected' : ''}" style="background-color: ${c};" onclick="selectColor('${c}')"></div>
+            `).join('');
+        }
+        function selectIcon(emoji) { currentSelectedIcon = emoji; renderEmojiGrid(); }
+        function selectColor(c) { currentSelectedColor = c; renderColorGrid(); }
+
         function openModal(id = null) {
             document.getElementById('m-id').value = id || '';
             if (id) {
                 const c = counters.find(x => x.id === id);
                 document.getElementById('modal-title').innerText = '编辑设置';
                 document.getElementById('m-name').value = c.name;
-                currentSelectedIcon = c.icon || '';
-                currentSelectedColor = c.color || COLOR_LIST[0];
+                currentSelectedIcon = c.icon || ''; currentSelectedColor = c.color || COLOR_LIST[0];
                 document.getElementById('m-step').value = c.step;
                 document.getElementById('m-target').value = c.target || '';
                 document.getElementById('m-timer').value = c.timerMinutes || '';
             } else {
                 document.getElementById('modal-title').innerText = '添加计数器';
                 document.getElementById('m-name').value = '';
-                currentSelectedIcon = '';
-                currentSelectedColor = COLOR_LIST[0];
+                currentSelectedIcon = ''; currentSelectedColor = COLOR_LIST[0];
                 document.getElementById('m-step').value = '1';
-                document.getElementById('m-target').value = '';
-                document.getElementById('m-timer').value = '';
+                document.getElementById('m-target').value = ''; document.getElementById('m-timer').value = '';
             }
-            renderEmojiGrid(); renderColorGrid();
-            modalOverlay.style.display = 'flex';
+            renderEmojiGrid(); renderColorGrid(); modalOverlay.style.display = 'flex';
         }
-
         function closeModal() { modalOverlay.style.display = 'none'; }
 
         function saveModal() {
             const id = document.getElementById('m-id').value;
             const name = document.getElementById('m-name').value.trim();
             const step = parseInt(document.getElementById('m-step').value) || 1;
-            const targetVal = document.getElementById('m-target').value;
-            const target = targetVal ? parseInt(targetVal) : null;
-            const timerVal = document.getElementById('m-timer').value;
-            const timerMinutes = timerVal ? parseFloat(timerVal) : 0;
+            const target = document.getElementById('m-target').value ? parseInt(document.getElementById('m-target').value) : null;
+            const timerMinutes = document.getElementById('m-timer').value ? parseFloat(document.getElementById('m-timer').value) : 0;
 
             if (!name) return alert("请输入名称");
 
             if (id) {
                 const index = counters.findIndex(c => c.id == id);
                 if (index !== -1) {
-                    counters[index].name = name; counters[index].icon = currentSelectedIcon;
-                    counters[index].color = currentSelectedColor; counters[index].step = step;
-                    counters[index].target = target; counters[index].timerMinutes = timerMinutes;
+                    Object.assign(counters[index], {name, icon: currentSelectedIcon, color: currentSelectedColor, step, target, timerMinutes});
                 }
             } else {
-                counters.push({
-                    id: Date.now(), name, icon: currentSelectedIcon, color: currentSelectedColor,
-                    step, target, count: 0, timerMinutes, lastUpdated: 0
-                });
+                counters.push({ id: Date.now(), name, icon: currentSelectedIcon, color: currentSelectedColor, step, target, count: 0, timerMinutes, lastUpdated: 0 });
             }
             saveAndRender(); closeModal();
         }
 
+        // ==== 核心互动 ====
         function increment(id) {
-            const index = counters.findIndex(c => c.id === id);
-            if (index !== -1) {
-                counters[index].count += counters[index].step;
-                counters[index].lastUpdated = Date.now();
+            const idx = counters.findIndex(c => c.id === id);
+            if (idx !== -1) {
+                counters[idx].count += counters[idx].step;
+                counters[idx].lastUpdated = Date.now();
                 saveAndRender();
 
-                if (counters[index].target && counters[index].count >= counters[index].target) {
+                if (counters[idx].target && counters[idx].count >= counters[idx].target) {
                     setTimeout(() => {
                         const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
-                        history.unshift({
-                            id: Date.now(), counterId: counters[index].id, name: counters[index].name,
-                            icon: counters[index].icon, color: counters[index].color, target: counters[index].target, time: Date.now()
-                        });
+                        history.unshift({ id: Date.now(), counterId: counters[idx].id, name: counters[idx].name, icon: counters[idx].icon, color: counters[idx].color, target: counters[idx].target, time: Date.now() });
                         localStorage.setItem('my_counters_history', JSON.stringify(history));
-
-                        alert(`🎉 恭喜！【${counters[index].name}】已达成目标（${counters[index].target}）！\n进度已自动记录并清零。`);
-                        counters[index].count = 0; counters[index].lastUpdated = 0; saveAndRender();
+                        alert(`🎉 恭喜！【${counters[idx].name}】已达成目标！`);
+                        counters[idx].count = 0; counters[idx].lastUpdated = 0; saveAndRender();
                     }, 50);
                 }
             }
         }
-
         function resetCounter(id) {
-            const index = counters.findIndex(c => c.id === id);
-            if (index !== -1) {
-                if (confirm(`确定要将【${counters[index].name}】清零吗？`)) {
-                    counters[index].count = 0; counters[index].lastUpdated = 0; saveAndRender();
-                }
-            }
+            const idx = counters.findIndex(c => c.id === id);
+            if (idx !== -1 && confirm(`清零【${counters[idx].name}】?`)) { counters[idx].count = 0; counters[idx].lastUpdated = 0; saveAndRender(); }
         }
-
         function deleteCounter(id) {
-            if (confirm(`删除后不可恢复，确定要删除吗？`)) {
-                counters = counters.filter(c => c.id !== id); saveAndRender();
-            }
+            if (confirm("删除后不可恢复，确定删除？")) { counters = counters.filter(c => c.id !== id); saveAndRender(); }
         }
 
-        // ---------- 统计面板逻辑 ----------
+        // ==== 统计大盘 ====
         function openStats() {
             const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
-            let grandTotal = 0;
-            const statsMap = {}; 
+            let grandTotal = 0; const statsMap = {}; 
             
             history.forEach(item => {
                 grandTotal += item.target;
-                const key = item.name;
-                if (!statsMap[key]) statsMap[key] = { icon: item.icon, color: item.color, total: 0 };
-                statsMap[key].total += item.target;
+                if (!statsMap[item.name]) statsMap[item.name] = { icon: item.icon, color: item.color, total: 0 };
+                statsMap[item.name].total += item.target;
             });
-            
             counters.forEach(c => {
                 grandTotal += c.count;
-                const key = c.name;
-                if (!statsMap[key]) statsMap[key] = { icon: c.icon, color: c.color, total: 0 };
-                statsMap[key].total += c.count;
+                if (!statsMap[c.name]) statsMap[c.name] = { icon: c.icon, color: c.color, total: 0 };
+                statsMap[c.name].total += c.count;
             });
 
             const summaryEl = document.getElementById('stats-summary-container');
@@ -499,63 +511,107 @@
                 summaryEl.innerHTML = '<div class="stats-empty" style="padding: 10px 0;">暂无任何累计数据</div>';
             } else {
                 const sortedKeys = Object.keys(statsMap).sort((a,b) => statsMap[b].total - statsMap[a].total);
-                const cardsHtml = sortedKeys.map(k => {
-                    const s = statsMap[k];
-                    const iconHtml = s.icon ? `<span style="font-size: 14px;">${s.icon}</span>` : '';
-                    return `
-                        <div class="stats-card">
-                            <div class="stats-name-col">${iconHtml}<span class="stats-name">${k}</span></div>
-                            <div class="stats-total" style="color: ${s.color}">${s.total}</div>
-                        </div>
-                    `;
-                }).join('');
-                
                 summaryEl.innerHTML = `
                     <div class="stats-summary-box">
-                        <div class="stats-grand-total">累计点击总数<span>${grandTotal}</span></div>
-                        <div class="section-title">各项目总计分布</div>
+                        <div class="stats-grand-total">总点击次数<span>${grandTotal}</span></div>
+                        <div class="section-title">分类总计</div>
                         <div class="stats-grid">
-                            ${cardsHtml}
+                            ${sortedKeys.map(k => `
+                                <div class="stats-card">
+                                    <div class="stats-name-col">${statsMap[k].icon?`<span>${statsMap[k].icon}</span>`:''}<span class="stats-name">${k}</span></div>
+                                    <div class="stats-total" style="color:${statsMap[k].color}">${statsMap[k].total}</div>
+                                </div>
+                            `).join('')}
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
 
             const listEl = document.getElementById('stats-list');
             if (history.length === 0) {
-                listEl.innerHTML = '<div class="stats-empty" style="padding: 20px 0;">暂无达成历史</div>';
+                listEl.innerHTML = '<div class="stats-empty">暂无达成历史</div>';
             } else {
                 listEl.innerHTML = history.map(item => {
                     const date = new Date(item.time);
                     const timeStr = `${date.getMonth()+1}月${date.getDate()}日 ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
-                    const iconHtml = item.icon ? `<div class="stat-icon">${item.icon}</div>` : '';
                     return `
                         <div class="stat-item">
-                            ${iconHtml}
-                            <div class="stat-info">
-                                <div class="stat-title">${item.name}</div>
-                                <div class="stat-time">${timeStr}</div>
-                            </div>
-                            <div class="stat-target" style="color: ${item.color || 'var(--blue)'}">
-                                +${item.target}
-                            </div>
-                        </div>
-                    `;
+                            ${item.icon?`<div class="stat-icon">${item.icon}</div>`:''}
+                            <div class="stat-info"><div class="stat-title">${item.name}</div><div class="stat-time">${timeStr}</div></div>
+                            <div class="stat-target" style="color: ${item.color || 'var(--blue)'}">+${item.target}</div>
+                        </div>`;
                 }).join('');
             }
-            
             statsOverlay.style.display = 'flex';
         }
-
         function closeStats() { statsOverlay.style.display = 'none'; }
-
         function clearStats() {
-            const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
-            if (history.length === 0) return;
-            if (confirm("确定要清空所有达成历史记录吗？（当前面板的活跃计数不会被清零）")) {
-                localStorage.setItem('my_counters_history', JSON.stringify([]));
-                openStats(); 
+            if (confirm("清空历史记录？（保留当前计数）")) { localStorage.setItem('my_counters_history', JSON.stringify([])); openStats(); }
+        }
+
+        // ==== 系统设置与导入导出 ====
+        function openSettings() {
+            document.getElementById('compact-toggle').checked = isCompactMode;
+            settingsOverlay.style.display = 'flex';
+        }
+        function closeSettings() { settingsOverlay.style.display = 'none'; }
+
+        function toggleCompact() {
+            isCompactMode = document.getElementById('compact-toggle').checked;
+            localStorage.setItem('my_counter_settings_compact', isCompactMode);
+            render(); 
+        }
+
+        // 导出备份
+        function exportData() {
+            const data = {
+                counters: counters,
+                history: JSON.parse(localStorage.getItem('my_counters_history') || '[]'),
+                settings: { isCompactMode }
+            };
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const file = new File([blob], "counter_backup.json", { type: "application/json" });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: '计数器数据备份',
+                    text: '这是我的计数器备份文件。'
+                }).catch(console.error);
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'counter_backup.json';
+                a.click();
+                URL.revokeObjectURL(url);
             }
+        }
+
+        // 导入恢复
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.counters && Array.isArray(data.counters)) {
+                        localStorage.setItem('my_multi_counters', JSON.stringify(data.counters));
+                    }
+                    if (data.history && Array.isArray(data.history)) {
+                        localStorage.setItem('my_counters_history', JSON.stringify(data.history));
+                    }
+                    if (data.settings && data.settings.isCompactMode !== undefined) {
+                        localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
+                    }
+                    alert("数据恢复成功！");
+                    location.reload(); 
+                } catch (err) {
+                    alert("导入失败：文件格式不正确！");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
         }
 
         render();
