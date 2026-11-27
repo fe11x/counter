@@ -201,12 +201,12 @@
             </div>
 
             <div class="form-group">
-                <label>选择图标或上传图片</label>
+                <label>必须上传图片作为封面</label>
                 <div class="icon-grid" id="icon-grid"></div>
             </div>
 
             <div class="form-group">
-                <label>名称*</label>
+                <label>名称 (可选)</label>
                 <input type="text" id="m-name" placeholder="如：吃苹果、俯卧撑">
             </div>
             
@@ -438,20 +438,20 @@
 
         // ==== 编辑器弹窗及表单 ====
         function renderEmojiGrid() {
-            let html = EMOJI_LIST.map(emoji => `
-                <div class="icon-item ${currentSelectedIcon === emoji ? 'selected' : ''}" onclick="selectIcon('${emoji}')">${emoji}</div>
-            `).join('');
-            
-            html += `<div class="icon-item none ${currentSelectedIcon === '' ? 'selected' : ''}" onclick="selectIcon('')">无</div>`;
+            // 清除了原本的 Emoji 遍历渲染，只保留了一个“无”选项和上传图片按钮
+            let html = ``;
             
             // 自定义图片按钮
             const isCustomImg = isBase64Image(currentSelectedIcon);
             const customContent = isCustomImg 
-                ? `<img src="${currentSelectedIcon}" class="custom-img-preview">` 
-                : `📷 选图`;
+                ? `<img src="${currentSelectedIcon}" class="custom-img-preview" style="width:50px; height:50px;">` 
+                : `<span style="font-size: 24px;">📷</span><br>点击上传图片`;
             
-            html += `<div class="custom-img-btn ${isCustomImg ? 'selected' : ''}" onclick="document.getElementById('image-upload').click()">
-                        ${customContent}
+            // 将按钮放大铺满所在区域，突出“必须选图片”的设计
+            html += `<div class="custom-img-btn ${isCustomImg ? 'selected' : ''}" 
+                          style="grid-column: span 6; padding: 20px 0; border-width: 3px; font-size: 14px;" 
+                          onclick="document.getElementById('image-upload').click()">
+                        <div style="text-align: center;">${customContent}</div>
                      </div>`;
 
             document.getElementById('icon-grid').innerHTML = html;
@@ -544,7 +544,8 @@
             const target = document.getElementById('m-target').value ? parseInt(document.getElementById('m-target').value) : null;
             const timerMinutes = document.getElementById('m-timer').value ? parseFloat(document.getElementById('m-timer').value) : 0;
 
-            if (!name) return alert("请输入名称");
+            // 强制要求必须上传图片/选择图标
+            if (!currentSelectedIcon) return alert("请务必选择一个图标或上传图片！");
 
             if (id) {
                 const index = counters.findIndex(c => c.id == id);
@@ -698,16 +699,27 @@
             };
             const jsonStr = JSON.stringify(data, null, 2);
             const blob = new Blob([jsonStr], { type: "application/json" });
-            const file = new File([blob], "counter_backup.json", { type: "application/json" });
+            
+            // 生成带时间戳的文件名：counter_backup_YYYYMMDD_HHMMSS.json
+            const now = new Date();
+            const timestamp = now.getFullYear().toString() + 
+                              (now.getMonth() + 1).toString().padStart(2, '0') + 
+                              now.getDate().toString().padStart(2, '0') + '_' + 
+                              now.getHours().toString().padStart(2, '0') + 
+                              now.getMinutes().toString().padStart(2, '0') + 
+                              now.getSeconds().toString().padStart(2, '0');
+            const fileName = `counter_backup_${timestamp}.json`;
+            
+            const file = new File([blob], fileName, { type: "application/json" });
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
-                    files: [file], title: '计数器数据备份', text: '这是我的计数器备份文件。'
+                    files: [file], title: '计数器数据备份', text: `这是我的计数器备份文件 (${timestamp})。`
                 }).catch(console.error);
             } else {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url; a.download = 'counter_backup.json';
+                a.href = url; a.download = fileName;
                 a.click(); URL.revokeObjectURL(url);
             }
         }
