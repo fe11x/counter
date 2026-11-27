@@ -365,10 +365,18 @@
             const now = new Date();
             const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             
-            // 过滤出今天的所有点击
-            const todayClicksCount = clicksLog.filter(t => t >= startOfTodayMs).length;
+            // 过滤出今天的所有点击，并累加它们的步长 (step)
+            let todayTotalValue = 0;
+            clicksLog.forEach(item => {
+                const timestamp = typeof item === 'number' ? item : item.t;
+                if (timestamp >= startOfTodayMs) {
+                    // 兼容老数据（如果没有步长信息，默认加 1）
+                    const step = typeof item === 'number' ? 1 : (item.s || 1);
+                    todayTotalValue += step;
+                }
+            });
             
-            document.getElementById('header-today-clicks').innerText = `今日点击: ${todayClicksCount}`;
+            document.getElementById('header-today-clicks').innerText = `今日总计: ${todayTotalValue}`;
         }
 
         // ==== 初始化与渲染 ====
@@ -685,17 +693,29 @@
         function increment(id) {
             const idx = counters.findIndex(c => c.id === id);
             if (idx !== -1) {
-                counters[idx].count += counters[idx].step;
+                const currentStep = counters[idx].step; // 获取当前设定的步长
+                counters[idx].count += currentStep;
                 counters[idx].lastUpdated = Date.now();
                 
-                // 记录每一次点击的时间（用于图表统计）
+                // 记录每一次点击的时间、归属和步长（用于精确的数据图表统计）
                 const clicksLog = JSON.parse(localStorage.getItem('my_counters_clicks')) || [];
-                clicksLog.push(Date.now());
                 
-                // 为了能画出完整的近 7 天点击图表，放宽 clicksLog 的存储期限
-                // 仅保留最近 7 天 (7 * 24 小时) 的数据防止膨胀
+                // 数据结构升级：从单时间戳升级为富信息对象
+                clicksLog.push({
+                    t: Date.now(),       // time: 点击发生的时间戳
+                    id: counters[idx].id,// id: 归属的计数器ID
+                    s: currentStep       // step: 带来的数值增量
+                });
+                
+                // 仅保留最近 7 天 (7 * 24 小时) 的数据
                 const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-                const filteredClicks = clicksLog.filter(t => t > sevenDaysAgo);
+                
+                // 兼容老数据（纯数字时间戳）与新数据（富对象）的过滤
+                const filteredClicks = clicksLog.filter(item => {
+                    const timestamp = typeof item === 'number' ? item : item.t;
+                    return timestamp > sevenDaysAgo;
+                });
+                
                 localStorage.setItem('my_counters_clicks', JSON.stringify(filteredClicks));
 
                 saveAndRender();
@@ -772,16 +792,19 @@
                 hourlyData.push(0);
             }
 
-            // 匹配最近 10 小时的点击量
+            // 匹配最近 10 小时的点击量，需计算步长
             const tenHoursAgoMs = Date.now() - 10 * 60 * 60 * 1000;
-            clicksLog.forEach(timestamp => {
+            clicksLog.forEach(item => {
+                const timestamp = typeof item === 'number' ? item : item.t;
                 if (timestamp >= tenHoursAgoMs) {
                     const clickDate = new Date(timestamp);
                     const clickHour = clickDate.getHours();
+                    const step = typeof item === 'number' ? 1 : (item.s || 1);
+                    
                     // 找到对应的坐标轴位置
                     let labelIndex = hourlyLabels.findIndex(lbl => lbl === `${clickHour}:00`);
                     if(labelIndex !== -1) {
-                        hourlyData[labelIndex]++;
+                        hourlyData[labelIndex] += step;
                     }
                 }
             });
@@ -829,13 +852,15 @@
             
             const sevenDaysAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
             
-            clicksLog.forEach(timestamp => {
+            clicksLog.forEach(item => {
+                const timestamp = typeof item === 'number' ? item : item.t;
                 if (timestamp >= sevenDaysAgoMs) {
                     const d = new Date(timestamp);
                     const dateStr = `${d.getMonth()+1}-${d.getDate()}`;
                     let labelIndex = dailyLabels.indexOf(dateStr);
                     if(labelIndex !== -1) {
-                        dailyData[labelIndex] += 1;
+                        const step = typeof item === 'number' ? 1 : (item.s || 1);
+                        dailyData[labelIndex] += step;
                     }
                 }
             });
