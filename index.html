@@ -394,25 +394,31 @@
         }
 
         // ==== 状态与 Header 数据渲染 ====
-        function updateHeaderTodayClicks() {
+        function updateHeaderTotal() {
+            const headerEl = document.getElementById('header-today-clicks');
             const clicksLog = JSON.parse(localStorage.getItem('my_counters_clicks')) || [];
             
-            // 计算今天零点的时间戳
-            const now = new Date();
-            const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-            
-            // 过滤出今天的所有点击，并累加它们的步长 (step)
-            let todayTotalValue = 0;
-            clicksLog.forEach(item => {
-                const timestamp = typeof item === 'number' ? item : item.t;
-                if (timestamp >= startOfTodayMs) {
-                    // 兼容老数据（如果没有步长信息，默认加 1）
-                    const step = typeof item === 'number' ? 1 : (item.s || 1);
-                    todayTotalValue += step;
-                }
-            });
-            
-            document.getElementById('header-today-clicks').innerText = `今日总计: ${todayTotalValue}`;
+            if (isFocusToday) {
+                const now = new Date();
+                const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                let todayTotalValue = 0;
+                clicksLog.forEach(item => {
+                    const timestamp = typeof item === 'number' ? item : item.t;
+                    if (timestamp >= startOfTodayMs) {
+                        const step = typeof item === 'number' ? 1 : (item.s || 1);
+                        todayTotalValue += step;
+                    }
+                });
+                headerEl.innerText = `今日: ${todayTotalValue}`;
+            } else {
+                // 如果未开启专注今日，则显示历史+当前的全局总计
+                const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
+                let grandTotal = 0;
+                history.forEach(item => grandTotal += (item.target || 0));
+                counters.forEach(c => grandTotal += (c.count || 0));
+                
+                headerEl.innerText = `总计: ${grandTotal}`;
+            }
         }
 
         // ==== 初始化与渲染 ====
@@ -423,7 +429,7 @@
                 render(); 
                 updateTimers(); 
             }
-            updateHeaderTodayClicks();
+            updateHeaderTotal();
         }
 
         // 将 Hex 颜色转换为带有透明度的 rgba
@@ -1069,6 +1075,7 @@
             isFocusToday = document.getElementById('focus-today-toggle').checked;
             localStorage.setItem('my_counter_settings_focus_today', isFocusToday);
             render(); 
+            updateHeaderTotal();
         }
 
         function setGridCols(cols) {
@@ -1146,7 +1153,7 @@
 
         render();
         updateTimers();
-        updateHeaderTodayClicks();
+        updateHeaderTotal();
     </script>
 </body>
 </html>
