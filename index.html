@@ -988,16 +988,23 @@
         function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
+
+            // ⚠️ 增加严厉的防呆确认，防止用户误覆盖数据
+            if (!confirm("⚠️ 危险操作警告：\n\n导入的备份文件将【彻底覆盖】你当前的所有计数器和历史数据！\n\n如果当前有未备份的新数据，它们将会丢失。确定要继续导入吗？")) {
+                event.target.value = ''; // 清空选择，允许下次再选
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
                     if (data.counters && Array.isArray(data.counters)) localStorage.setItem('my_multi_counters', JSON.stringify(data.counters));
                     if (data.history && Array.isArray(data.history)) localStorage.setItem('my_counters_history', JSON.stringify(data.history));
-                    if (data.clicks && Array.isArray(data.clicks)) localStorage.setItem('my_counters_clicks', JSON.stringify(data.clicks)); // 恢复点击流数据
+                    if (data.clicks && Array.isArray(data.clicks)) localStorage.setItem('my_counters_clicks', JSON.stringify(data.clicks)); 
                     if (data.settings && data.settings.isCompactMode !== undefined) localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
-                    alert("数据恢复成功！"); location.reload(); 
-                } catch (err) { alert("导入失败：文件格式不正确！"); }
+                    alert("✅ 数据恢复成功！"); location.reload(); 
+                } catch (err) { alert("❌ 导入失败：文件格式不正确或已损坏！"); }
             };
             reader.readAsText(file);
             event.target.value = '';
