@@ -99,6 +99,28 @@
         
         .compact-count { position: relative; z-index: 2; font-size: 54px; font-weight: 800; color: #FFF; text-shadow: 0 2px 12px rgba(0,0,0,0.6); font-variant-numeric: tabular-nums; }
         .compact-name { position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 2; color: rgba(255,255,255,0.95); font-size: 14px; font-weight: 600; text-shadow: 0 1px 6px rgba(0,0,0,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+        
+        /* 精简模式：细线进度条与迷你超时提醒 */
+        .compact-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 5px; background: rgba(0,0,0,0.5); z-index: 3; }
+        .compact-progress-fill { height: 100%; transition: width 0.3s ease; }
+        
+        .compact-alert-icon { 
+            position: absolute; top: 10px; right: 10px; z-index: 3; 
+            font-size: 20px; text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            display: none; /* 默认隐藏，仅在超时时通过 JS 显示并添加动画 */
+        }
+        .compact-alert-icon.danger { display: block; animation: bell-ring 1s infinite cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+        
+        @keyframes bell-ring {
+            0% { transform: rotate(0); }
+            15% { transform: rotate(15deg); }
+            30% { transform: rotate(-15deg); }
+            45% { transform: rotate(10deg); }
+            60% { transform: rotate(-10deg); }
+            75% { transform: rotate(5deg); }
+            85% { transform: rotate(-5deg); }
+            100% { transform: rotate(0); }
+        }
 
         .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 14px; grid-column: 1 / -1; }
 
@@ -344,11 +366,28 @@
                         ? `background-image: url('${c.icon}');` 
                         : `background-color: ${c.color};`; // 万一没有图片，兜底使用主题色
                     
+                    let compactProgress = '';
+                    if (c.target && c.target > 0) {
+                        const percent = Math.min((c.count / c.target) * 100, 100);
+                        const isSuccess = c.count >= c.target;
+                        compactProgress = `
+                        <div class="compact-progress">
+                            <div class="compact-progress-fill" style="width: ${percent}%; background-color: ${isSuccess ? 'var(--green)' : c.color};"></div>
+                        </div>`;
+                    }
+
+                    // 仅保留一个铃铛的 DOM 占位，且默认隐藏
+                    const compactAlert = c.timerMinutes > 0 
+                        ? `<span id="alert-compact-${c.id}" class="compact-alert-icon">🔔</span>` 
+                        : '';
+
                     return `
                     <div class="compact-card" data-id="${c.id}" style="${bgStyle}" onclick="increment(${c.id})">
                         <div class="compact-overlay"></div>
+                        ${compactAlert}
                         <div class="compact-count">${c.count}</div>
                         ${c.name ? `<div class="compact-name">${c.name}</div>` : ''}
+                        ${compactProgress}
                     </div>
                     `;
                 }
@@ -436,22 +475,47 @@
             return `${Math.floor(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}`;
         }
         function updateTimers() {
-            if(isCompactMode) return; 
             const now = Date.now();
             counters.forEach(c => {
                 if (!c.timerMinutes) return;
-                const el = document.getElementById(`timer-${c.id}`);
-                if (!el) return;
+
+                // 标准模式的 DOM
+                const elStandard = document.getElementById(`timer-${c.id}`);
+                // 精简模式的小铃铛 DOM
+                const elCompactAlert = document.getElementById(`alert-compact-${c.id}`);
+                
+                if (!elStandard && !elCompactAlert) return;
+                
+                let text = '', className = '';
+                let isDanger = false;
+
                 if (!c.lastUpdated) {
-                    el.innerText = '待点击'; el.className = 'timer-badge idle'; return;
-                }
-                const remainMs = (c.timerMinutes * 60 * 1000) - (now - c.lastUpdated);
-                if (remainMs <= 0) {
-                    el.innerText = '已超时'; el.className = 'timer-badge danger';
-                } else if (remainMs <= 60000) { 
-                    el.innerText = formatTime(remainMs); el.className = 'timer-badge warning';
+                    text = '待点击'; className = 'timer-badge idle';
                 } else {
-                    el.innerText = formatTime(remainMs); el.className = 'timer-badge normal';
+                    const remainMs = (c.timerMinutes * 60 * 1000) - (now - c.lastUpdated);
+                    if (remainMs <= 0) {
+                        text = '已超时'; className = 'timer-badge danger';
+                        isDanger = true;
+                    } else if (remainMs <= 60000) { 
+                        text = formatTime(remainMs); className = 'timer-badge warning';
+                    } else {
+                        text = formatTime(remainMs); className = 'timer-badge normal';
+                    }
+                }
+
+                if (elStandard) {
+                    elStandard.innerText = text;
+                    elStandard.className = className;
+                }
+                
+                if (elCompactAlert) {
+                    // 若超时，则显现铃铛并使用 css 控制其发疯摇摆
+                    if (isDanger) {
+                        elCompactAlert.className = 'compact-alert-icon danger';
+                    } else {
+                        // 未超时，隐去铃铛，保持绝对干净纯净的画面
+                        elCompactAlert.className = 'compact-alert-icon';
+                    }
                 }
             });
         }
