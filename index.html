@@ -687,15 +687,18 @@
             if (idx !== -1) {
                 counters[idx].count += counters[idx].step;
                 counters[idx].lastUpdated = Date.now();
-                saveAndRender();
-
-                // 记录每一次点击的时间（用于10小时图表）
+                
+                // 记录每一次点击的时间（用于图表统计）
                 const clicksLog = JSON.parse(localStorage.getItem('my_counters_clicks')) || [];
                 clicksLog.push(Date.now());
-                // 仅保留最近 24 小时的数据防止膨胀
-                const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-                const filteredClicks = clicksLog.filter(t => t > oneDayAgo);
+                
+                // 为了能画出完整的近 7 天点击图表，放宽 clicksLog 的存储期限
+                // 仅保留最近 7 天 (7 * 24 小时) 的数据防止膨胀
+                const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+                const filteredClicks = clicksLog.filter(t => t > sevenDaysAgo);
                 localStorage.setItem('my_counters_clicks', JSON.stringify(filteredClicks));
+
+                saveAndRender();
 
                 if (counters[idx].target && counters[idx].count >= counters[idx].target) {
                     setTimeout(() => {
@@ -810,7 +813,7 @@
                 }
             });
 
-            // ==== 2. 渲染近 7 天达成趋势 (基于历史记录) ====
+            // ==== 2. 渲染近 7 天点击趋势 (基于点击日志) ====
             let dailyLabels = [];
             let dailyData = [];
             
@@ -821,14 +824,18 @@
                 dailyData.push(0);
             }
 
+            // 我们已经修改了底层的 clicksLog 清理逻辑，它现在会保存完整的 7 天点击记录。
+            // 因此不再需要依赖 history（达成记录）去估算，直接遍历 clicksLog 即可精准得出每天的真实点击量。
+            
             const sevenDaysAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-            history.forEach(item => {
-                if (item.time >= sevenDaysAgoMs) {
-                    const d = new Date(item.time);
+            
+            clicksLog.forEach(timestamp => {
+                if (timestamp >= sevenDaysAgoMs) {
+                    const d = new Date(timestamp);
                     const dateStr = `${d.getMonth()+1}-${d.getDate()}`;
                     let labelIndex = dailyLabels.indexOf(dateStr);
-                    if (labelIndex !== -1) {
-                        dailyData[labelIndex] += item.target; // 这里可以改为 ++ (达成次数)，但按照总数更直观
+                    if(labelIndex !== -1) {
+                        dailyData[labelIndex] += 1;
                     }
                 }
             });
@@ -840,7 +847,7 @@
                 data: {
                     labels: dailyLabels,
                     datasets: [{
-                        label: '达成量',
+                        label: '每日总点击数',
                         data: dailyData,
                         backgroundColor: '#34C759',
                         borderRadius: 4
