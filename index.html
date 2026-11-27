@@ -6,7 +6,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>我的计数器</title>
+    <!-- 引入拖拽库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- 引入图表库 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg: #E5E5EA; --card-bg: #FFFFFF; --text-main: #000000;
@@ -181,7 +184,12 @@
         .stats-name-col { display: flex; align-items: center; gap: 4px; font-size: 12px; overflow: hidden; }
         .stats-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .stats-total { font-weight: bold; font-size: 14px; }
-        .section-title { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: 600; }
+        
+        .section-title { font-size: 13px; color: var(--text-sub); margin-bottom: 10px; font-weight: 600; padding-top: 10px; }
+        
+        /* 图表容器 */
+        .chart-container { position: relative; height: 160px; width: 100%; margin-bottom: 16px; background: var(--card-bg); border-radius: 10px; padding: 10px; box-sizing: border-box; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        
         .stat-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
         .stat-item:last-child { border-bottom: none; }
         .stat-icon { font-size: 18px; margin-right: 8px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; overflow: hidden; }
@@ -294,14 +302,25 @@
     <div class="modal-overlay" id="stats-overlay">
         <div class="modal" style="width: 95%; max-width: 400px; padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <button class="btn-action delete" onclick="clearStats()">清空记录</button>
+                <button class="btn-action delete" onclick="clearStats()">清空数据</button>
                 <h3 style="margin: 0; font-size: 16px;">数据统计</h3>
                 <button class="btn-action" onclick="closeStats()" style="font-weight: 600;">关闭</button>
             </div>
             
-            <div style="max-height: 70vh; overflow-y: auto; padding-bottom: 10px;">
+            <div style="max-height: 75vh; overflow-y: auto; padding-bottom: 20px;">
                 <div id="stats-summary-container"></div>
-                <div class="section-title">达成历史记录</div>
+                
+                <div class="section-title">近10小时活跃度 (今日)</div>
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+
+                <div class="section-title">近7天习惯达成趋势</div>
+                <div class="chart-container">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+
+                <div class="section-title">达成历史明细</div>
                 <div id="stats-list"></div>
             </div>
         </div>
@@ -651,6 +670,14 @@
                 counters[idx].lastUpdated = Date.now();
                 saveAndRender();
 
+                // 记录每一次点击的时间（用于10小时图表）
+                const clicksLog = JSON.parse(localStorage.getItem('my_counters_clicks')) || [];
+                clicksLog.push(Date.now());
+                // 仅保留最近 24 小时的数据防止膨胀
+                const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+                const filteredClicks = clicksLog.filter(t => t > oneDayAgo);
+                localStorage.setItem('my_counters_clicks', JSON.stringify(filteredClicks));
+
                 if (counters[idx].target && counters[idx].count >= counters[idx].target) {
                     setTimeout(() => {
                         const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
@@ -691,7 +718,7 @@
             if (confirm("删除后不可恢复，确定删除？")) { counters = counters.filter(c => c.id !== id); saveAndRender(); }
         }
 
-        // ==== 统计大盘 ====
+        // ==== 统计大盘 (含 Chart.js 渲染) ====
         function getIconHtml(iconData, sizeStyle = "font-size: 16px;") {
             if (!iconData) return '';
             if (isBase64Image(iconData)) {
@@ -700,8 +727,121 @@
             return `<span style="${sizeStyle}">${iconData}</span>`;
         }
 
+        let hourlyChartInstance = null;
+        let dailyChartInstance = null;
+
+        function renderCharts(history, clicksLog) {
+            // 图表全局通用配置 (深色模式/浅色模式适配)
+            Chart.defaults.font.family = '-apple-system, sans-serif';
+            Chart.defaults.color = '#8E8E93';
+            Chart.defaults.scale.grid.color = 'rgba(0,0,0,0.05)';
+
+            // ==== 1. 渲染今日 10 小时趋势 (基于点击日志) ====
+            const now = new Date();
+            const currentHour = now.getHours();
+            let hourlyLabels = [];
+            let hourlyData = [];
+            
+            // 构造最近 10 个小时的数组（例如现在 15:30，就是 6:00, 7:00 ... 15:00）
+            for(let i = 9; i >= 0; i--) {
+                let h = currentHour - i;
+                if (h < 0) h += 24; // 跨天处理
+                hourlyLabels.push(`${h}:00`);
+                hourlyData.push(0);
+            }
+
+            // 匹配最近 10 小时的点击量
+            const tenHoursAgoMs = Date.now() - 10 * 60 * 60 * 1000;
+            clicksLog.forEach(timestamp => {
+                if (timestamp >= tenHoursAgoMs) {
+                    const clickDate = new Date(timestamp);
+                    const clickHour = clickDate.getHours();
+                    // 找到对应的坐标轴位置
+                    let labelIndex = hourlyLabels.findIndex(lbl => lbl === `${clickHour}:00`);
+                    if(labelIndex !== -1) {
+                        hourlyData[labelIndex]++;
+                    }
+                }
+            });
+
+            const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+            if (hourlyChartInstance) hourlyChartInstance.destroy();
+            hourlyChartInstance = new Chart(ctxHourly, {
+                type: 'line',
+                data: {
+                    labels: hourlyLabels,
+                    datasets: [{
+                        label: '点击活跃度',
+                        data: hourlyData,
+                        borderColor: '#007AFF',
+                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4, // 平滑曲线
+                        fill: true,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 5 } }
+                    }
+                }
+            });
+
+            // ==== 2. 渲染近 7 天达成趋势 (基于历史记录) ====
+            let dailyLabels = [];
+            let dailyData = [];
+            
+            // 构造最近 7 天的日期数组 (MM-DD)
+            for(let i = 6; i >= 0; i--) {
+                const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                dailyLabels.push(`${d.getMonth()+1}-${d.getDate()}`);
+                dailyData.push(0);
+            }
+
+            const sevenDaysAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+            history.forEach(item => {
+                if (item.time >= sevenDaysAgoMs) {
+                    const d = new Date(item.time);
+                    const dateStr = `${d.getMonth()+1}-${d.getDate()}`;
+                    let labelIndex = dailyLabels.indexOf(dateStr);
+                    if (labelIndex !== -1) {
+                        dailyData[labelIndex] += item.target; // 这里可以改为 ++ (达成次数)，但按照总数更直观
+                    }
+                }
+            });
+
+            const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+            if (dailyChartInstance) dailyChartInstance.destroy();
+            dailyChartInstance = new Chart(ctxDaily, {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [{
+                        label: '达成量',
+                        data: dailyData,
+                        backgroundColor: '#34C759',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
         function openStats() {
             const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
+            const clicksLog = JSON.parse(localStorage.getItem('my_counters_clicks')) || [];
+            
             let grandTotal = 0; const statsMap = {}; 
             
             history.forEach(item => {
@@ -757,10 +897,19 @@
                 }).join('');
             }
             statsOverlay.style.display = 'flex';
+            
+            // 延迟渲染图表，确保 Canvas 元素已经显示在屏幕上
+            setTimeout(() => {
+                renderCharts(history, clicksLog);
+            }, 50);
         }
         function closeStats() { statsOverlay.style.display = 'none'; }
         function clearStats() {
-            if (confirm("清空历史记录？（保留当前计数）")) { localStorage.setItem('my_counters_history', JSON.stringify([])); openStats(); }
+            if (confirm("清空历史数据？（将删除趋势图和历史列表，但保留当前计数）")) { 
+                localStorage.setItem('my_counters_history', JSON.stringify([])); 
+                localStorage.setItem('my_counters_clicks', JSON.stringify([]));
+                openStats(); 
+            }
         }
 
         // ==== 系统设置与导入导出 ====
