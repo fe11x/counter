@@ -333,28 +333,41 @@
 
     <!-- 统计 弹窗 -->
     <div class="modal-overlay" id="stats-overlay">
-        <div class="modal" style="width: 95%; max-width: 400px; padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <button class="btn-action delete" onclick="clearStats()">清空数据</button>
+        <div class="modal" style="width: 95%; max-width: 400px; padding: 20px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="width: 60px;"></div> <!-- placeholder to center title -->
                 <h3 style="margin: 0; font-size: 16px;">数据统计</h3>
-                <button class="btn-action" onclick="closeStats()" style="font-weight: 600;">关闭</button>
+                <button class="btn-action" onclick="closeStats()" style="font-weight: 600; width: 60px; text-align: right;">关闭</button>
             </div>
             
-            <div style="max-height: 75vh; overflow-y: auto; padding-bottom: 20px;">
-                <div id="stats-summary-container"></div>
+            <!-- Tabs -->
+            <div class="segment-control" style="margin-bottom: 16px;">
+                <div id="tab-btn-trends" class="segment-btn active" onclick="switchStatTab('trends')">趋势概览</div>
+                <div id="tab-btn-details" class="segment-btn" onclick="switchStatTab('details')">今日明细</div>
+            </div>
+            
+            <div style="max-height: 70vh; overflow-y: auto; padding-bottom: 20px;" id="stats-scroll-area">
                 
-                <div class="section-title">近10小时活跃度 (今日)</div>
-                <div class="chart-container">
-                    <canvas id="hourlyChart"></canvas>
+                <!-- Tab 1: Trends -->
+                <div id="stat-tab-trends">
+                    <div id="stats-summary-container"></div>
+                    
+                    <div class="section-title">近10小时活跃度 (今日)</div>
+                    <div class="chart-container">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+
+                    <div class="section-title">近7天点击趋势</div>
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
                 </div>
 
-                <div class="section-title">近7天习惯达成趋势</div>
-                <div class="chart-container">
-                    <canvas id="dailyChart"></canvas>
+                <!-- Tab 2: Details -->
+                <div id="stat-tab-details" style="display: none;">
+                    <div id="stats-list"></div>
                 </div>
-
-                <div class="section-title">达成历史明细</div>
-                <div id="stats-list"></div>
+                
             </div>
         </div>
     </div>
@@ -850,7 +863,17 @@
             if (confirm("删除后不可恢复，确定删除？")) { counters = counters.filter(c => c.id !== id); saveAndRender(); }
         }
 
-        // ==== 统计大盘 (含 Chart.js 渲染) ====
+        // ==== 统计面板逻辑 ====
+        function switchStatTab(tab) {
+            document.getElementById('tab-btn-trends').classList.remove('active');
+            document.getElementById('tab-btn-details').classList.remove('active');
+            document.getElementById('stat-tab-trends').style.display = 'none';
+            document.getElementById('stat-tab-details').style.display = 'none';
+            
+            document.getElementById(`tab-btn-${tab}`).classList.add('active');
+            document.getElementById(`stat-tab-${tab}`).style.display = 'block';
+        }
+
         function getIconHtml(iconData, sizeStyle = "font-size: 16px;") {
             if (!iconData) return '';
             if (isBase64Image(iconData)) {
@@ -1017,26 +1040,52 @@
             }
 
             const listEl = document.getElementById('stats-list');
-            if (history.length === 0) {
-                listEl.innerHTML = '<div class="stats-empty">暂无达成历史</div>';
-            } else {
-                listEl.innerHTML = history.map(item => {
-                    const date = new Date(item.time);
-                    const timeStr = `${date.getMonth()+1}月${date.getDate()}日 ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
-                    
-                    let iconHtml = '';
-                    if(item.icon){
-                        iconHtml = `<div class="stat-icon">${isBase64Image(item.icon) ? `<img src="${item.icon}">` : item.icon}</div>`;
-                    }
+            
+            // 过滤出今天的点击记录，并按时间倒序（最新的在前）
+            const now = new Date();
+            const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const todayClicks = clicksLog.filter(item => {
+                const timestamp = typeof item === 'number' ? item : item.t;
+                return timestamp >= startOfTodayMs;
+            }).sort((a, b) => {
+                const ta = typeof a === 'number' ? a : a.t;
+                const tb = typeof b === 'number' ? b : b.t;
+                return tb - ta;
+            });
+            
+            // 只取最近 20 条
+            const recent20 = todayClicks.slice(0, 20);
 
+            if (recent20.length === 0) {
+                listEl.innerHTML = '<div class="stats-empty">今日暂无点击记录</div>';
+            } else {
+                listEl.innerHTML = recent20.map(item => {
+                    const timestamp = typeof item === 'number' ? item : item.t;
+                    const itemId = typeof item === 'number' ? null : item.id;
+                    const step = typeof item === 'number' ? 1 : (item.s || 1);
+                    
+                    // 查找对应的计数器配置
+                    const c = counters.find(x => x.id === itemId);
+                    const name = c ? c.name : '已删除项';
+                    const icon = c ? c.icon : '';
+                    const color = c ? c.color : 'var(--text-main)';
+
+                    const date = new Date(timestamp);
+                    const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}:${date.getSeconds().toString().padStart(2,'0')}`;
+                    
                     return `
                         <div class="stat-item">
-                            ${iconHtml}
-                            <div class="stat-info"><div class="stat-title">${item.name}</div><div class="stat-time">${timeStr}</div></div>
-                            <div class="stat-target" style="color: ${item.color || 'var(--blue)'}">+${item.target}</div>
+                            ${getIconHtml(icon, "font-size: 18px;")}
+                            <div class="stat-info">
+                                <div class="stat-title">${name}</div>
+                                <div class="stat-time">${timeStr}</div>
+                            </div>
+                            <div class="stat-target" style="color: ${color}">+${step}</div>
                         </div>`;
                 }).join('');
             }
+            
+            switchStatTab('trends'); // 打开时默认显示趋势标签
             statsOverlay.style.display = 'flex';
             
             // 延迟渲染图表，确保 Canvas 元素已经显示在屏幕上
@@ -1045,13 +1094,6 @@
             }, 50);
         }
         function closeStats() { statsOverlay.style.display = 'none'; }
-        function clearStats() {
-            if (confirm("清空历史数据？（将删除趋势图和历史列表，但保留当前计数）")) { 
-                localStorage.setItem('my_counters_history', JSON.stringify([])); 
-                localStorage.setItem('my_counters_clicks', JSON.stringify([]));
-                openStats(); 
-            }
-        }
 
         // ==== 系统设置与导入导出 ====
         function openSettings() {
