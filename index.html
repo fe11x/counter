@@ -821,7 +821,64 @@
                 
                 localStorage.setItem('my_counters_clicks', JSON.stringify(filteredClicks));
 
-                saveAndRender();
+                // 优化体验：不再全量重建 DOM，只精准更新变化的部分
+                // 更新内存和本地存储
+                localStorage.setItem('my_multi_counters', JSON.stringify(counters));
+                
+                // 1. 更新卡片上的数字
+                let newDisplayCount = counters[idx].count;
+                if (isFocusToday) {
+                    const now = new Date();
+                    const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                    newDisplayCount = 0;
+                    filteredClicks.forEach(item => {
+                        const timestamp = typeof item === 'number' ? item : item.t;
+                        if (timestamp >= startOfTodayMs) {
+                            const itemId = typeof item === 'number' ? counters[idx].id : (item.id || counters[idx].id);
+                            if (itemId === counters[idx].id) {
+                                const step = typeof item === 'number' ? 1 : (item.s || 1);
+                                newDisplayCount += step;
+                            }
+                        }
+                    });
+                }
+                
+                // 找到对应的 DOM 节点精准替换数字，避免闪烁
+                const cardEl = document.querySelector(`.card[data-id="${id}"] .tap-btn`) || 
+                               document.querySelector(`.compact-card[data-id="${id}"] .compact-count`);
+                if (cardEl) {
+                    cardEl.innerText = newDisplayCount;
+                }
+
+                // 2. 更新进度条 (如果设置了目标)
+                if (counters[idx].target && counters[idx].target > 0) {
+                    const percent = Math.min((newDisplayCount / counters[idx].target) * 100, 100);
+                    const isSuccess = newDisplayCount >= counters[idx].target;
+                    
+                    // 标准模式进度条更新
+                    const standardTrack = document.querySelector(`.card[data-id="${id}"] .progress-fill`);
+                    const standardText = document.querySelector(`.card[data-id="${id}"] .progress-text span:last-child`);
+                    if (standardTrack) {
+                        standardTrack.style.width = `${percent}%`;
+                        standardTrack.style.backgroundColor = isSuccess ? 'var(--green)' : counters[idx].color;
+                    }
+                    if (standardText) {
+                        standardText.innerText = `${newDisplayCount} / ${counters[idx].target}`;
+                    }
+
+                    // 精简模式进度条更新
+                    const compactTrack = document.querySelector(`.compact-card[data-id="${id}"] .compact-progress-fill`);
+                    if (compactTrack) {
+                        compactTrack.style.width = `${percent}%`;
+                        compactTrack.style.backgroundColor = isSuccess ? 'var(--green)' : counters[idx].color;
+                    }
+                }
+
+                // 3. 更新顶部的总计/今日 Header
+                updateHeaderTotal();
+
+                // 4. 重置倒计时铃铛状态（如果是精简模式且超时的状态，一点击铃铛要消失）
+                updateTimers();
 
                 if (counters[idx].target && counters[idx].count >= counters[idx].target) {
                     setTimeout(() => {
