@@ -87,7 +87,13 @@
         .tap-btn:active { opacity: 0.8; transform: scale(0.92); }
 
         /* == 精简模式 (Compact) 网格图片背景设计 == */
-        .list-container.compact { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 80px; }
+        .list-container.compact { display: grid; gap: 12px; padding-bottom: 80px; }
+        
+        /* 动态控制精简模式列数的类，默认 2 列 */
+        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
         .compact-card {
             position: relative; aspect-ratio: 1 / 1; border-radius: 16px;
             background-size: cover; background-position: center; background-color: var(--card-bg);
@@ -167,13 +173,18 @@
         .modal-btn.save { background: var(--blue); color: white; }
 
         /* 设置面板 Switch 开关 */
-        .settings-item { display: flex; justify-content: space-between; align-items: center; font-size: 15px; margin-bottom: 20px; }
+        .settings-item { display: flex; justify-content: space-between; align-items: center; font-size: 15px; margin-bottom: 16px; }
         .switch { position: relative; display: inline-block; width: 44px; height: 26px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .3s; border-radius: 26px; }
         .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: var(--green); }
         input:checked + .slider:before { transform: translateX(18px); }
+
+        /* 行列设置按钮组 */
+        .segment-control { display: flex; background: var(--bg); border-radius: 8px; padding: 3px; }
+        .segment-btn { flex: 1; text-align: center; font-size: 13px; font-weight: 500; padding: 6px 0; color: var(--text-sub); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .segment-btn.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
         /* 统计面板样式 */
         .stats-summary-box { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
@@ -275,11 +286,20 @@
             <h3>系统设置</h3>
             
             <div class="settings-item">
-                <span>精简模式 (双列卡片)</span>
+                <span>精简模式 (图片卡片)</span>
                 <label class="switch">
                     <input type="checkbox" id="compact-toggle" onchange="toggleCompact()">
                     <span class="slider"></span>
                 </label>
+            </div>
+
+            <div class="settings-item">
+                <span>网格列数 (精简模式)</span>
+                <div class="segment-control" style="width: 140px;">
+                    <div id="col-btn-2" class="segment-btn active" onclick="setGridCols(2)">2列</div>
+                    <div id="col-btn-3" class="segment-btn" onclick="setGridCols(3)">3列</div>
+                    <div id="col-btn-4" class="segment-btn" onclick="setGridCols(4)">4列</div>
+                </div>
             </div>
 
             <hr style="border:0; border-top:1px solid var(--border); margin:18px 0;">
@@ -340,6 +360,8 @@
 
         // 状态读取
         let isCompactMode = localStorage.getItem('my_counter_settings_compact') === 'true';
+        let gridCols = parseInt(localStorage.getItem('my_counter_settings_grid_cols')) || 2; // 默认2列
+        
         let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
         counters = counters.map(c => ({
             ...c, step: c.step || 1, target: c.target || null, icon: c.icon || '',
@@ -391,10 +413,11 @@
         }
 
         function render() {
+            // 清除旧的列数类
+            listContainer.classList.remove('compact', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4');
+            
             if (isCompactMode) {
-                listContainer.classList.add('compact');
-            } else {
-                listContainer.classList.remove('compact');
+                listContainer.classList.add('compact', `grid-cols-${gridCols}`);
             }
 
             if (counters.length === 0) {
@@ -407,10 +430,15 @@
 
             listContainer.innerHTML = counters.map((c) => {
                 if (isCompactMode) {
-                    // 精简模式：正方形卡片，上传的图片作为全覆盖背景
+                    // 动态调整数字大小以适应列数
+                    let countFontSize = '54px';
+                    let nameFontSize = '14px';
+                    if (gridCols === 3) { countFontSize = '36px'; nameFontSize = '12px'; }
+                    if (gridCols === 4) { countFontSize = '28px'; nameFontSize = '10px'; }
+
                     const bgStyle = c.icon && c.icon.startsWith('data:image/') 
                         ? `background-image: url('${c.icon}');` 
-                        : `background-color: ${c.color};`; // 万一没有图片，兜底使用主题色
+                        : `background-color: ${c.color};`; 
                     
                     let compactProgress = '';
                     if (c.target && c.target > 0) {
@@ -422,7 +450,6 @@
                         </div>`;
                     }
 
-                    // 仅保留一个铃铛的 DOM 占位，且默认隐藏
                     const compactAlert = c.timerMinutes > 0 
                         ? `<span id="alert-compact-${c.id}" class="compact-alert-icon">🔔</span>` 
                         : '';
@@ -431,8 +458,8 @@
                     <div class="compact-card" data-id="${c.id}" style="${bgStyle}" onclick="increment(${c.id})">
                         <div class="compact-overlay"></div>
                         ${compactAlert}
-                        <div class="compact-count">${c.count}</div>
-                        ${c.name ? `<div class="compact-name">${c.name}</div>` : ''}
+                        <div class="compact-count" style="font-size:${countFontSize}">${c.count}</div>
+                        ${c.name ? `<div class="compact-name" style="font-size:${nameFontSize}">${c.name}</div>` : ''}
                         ${compactProgress}
                     </div>
                     `;
@@ -966,6 +993,10 @@
         // ==== 系统设置与导入导出 ====
         function openSettings() {
             document.getElementById('compact-toggle').checked = isCompactMode;
+            // 恢复列数按钮高亮
+            document.querySelectorAll('.segment-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`col-btn-${gridCols}`).classList.add('active');
+            
             settingsOverlay.style.display = 'flex';
         }
         function closeSettings() { settingsOverlay.style.display = 'none'; }
@@ -976,12 +1007,22 @@
             render(); 
         }
 
+        function setGridCols(cols) {
+            gridCols = cols;
+            localStorage.setItem('my_counter_settings_grid_cols', gridCols);
+            
+            document.querySelectorAll('.segment-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`col-btn-${cols}`).classList.add('active');
+            
+            if(isCompactMode) render(); // 只有在精简模式下才需要立刻重新渲染
+        }
+
         function exportData() {
             const data = {
                 counters: counters,
                 history: JSON.parse(localStorage.getItem('my_counters_history') || '[]'),
                 clicks: JSON.parse(localStorage.getItem('my_counters_clicks') || '[]'), // 补上隐藏的点击流水日志
-                settings: { isCompactMode }
+                settings: { isCompactMode, gridCols }
             };
             const jsonStr = JSON.stringify(data, null, 2);
             const blob = new Blob([jsonStr], { type: "application/json" });
@@ -1027,7 +1068,10 @@
                     if (data.counters && Array.isArray(data.counters)) localStorage.setItem('my_multi_counters', JSON.stringify(data.counters));
                     if (data.history && Array.isArray(data.history)) localStorage.setItem('my_counters_history', JSON.stringify(data.history));
                     if (data.clicks && Array.isArray(data.clicks)) localStorage.setItem('my_counters_clicks', JSON.stringify(data.clicks)); 
-                    if (data.settings && data.settings.isCompactMode !== undefined) localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
+                    if (data.settings) {
+                        if (data.settings.isCompactMode !== undefined) localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
+                        if (data.settings.gridCols !== undefined) localStorage.setItem('my_counter_settings_grid_cols', data.settings.gridCols);
+                    }
                     alert("✅ 数据恢复成功！"); location.reload(); 
                 } catch (err) { alert("❌ 导入失败：文件格式不正确或已损坏！"); }
             };
