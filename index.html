@@ -205,7 +205,7 @@
 
     <div class="header">
         <div class="header-left">
-            <span>计数器</span>
+            <span id="header-today-clicks">今日: 0</span>
         </div>
         <div class="header-right">
             <button class="header-btn" onclick="openStats()">统计</button>
@@ -357,10 +357,29 @@
             return str && str.startsWith('data:image/');
         }
 
+        // ==== 状态与 Header 数据渲染 ====
+        function updateHeaderTodayClicks() {
+            const clicksLog = JSON.parse(localStorage.getItem('my_counters_clicks')) || [];
+            
+            // 计算今天零点的时间戳
+            const now = new Date();
+            const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            
+            // 过滤出今天的所有点击
+            const todayClicksCount = clicksLog.filter(t => t >= startOfTodayMs).length;
+            
+            document.getElementById('header-today-clicks').innerText = `今日点击: ${todayClicksCount}`;
+        }
+
         // ==== 初始化与渲染 ====
         function saveAndRender(skipRender = false) {
+            localStorage.setItem('my_counters_clicks', JSON.stringify(JSON.parse(localStorage.getItem('my_counters_clicks')) || [])); // Ensure it exists
             localStorage.setItem('my_multi_counters', JSON.stringify(counters));
-            if (!skipRender) { render(); updateTimers(); }
+            if (!skipRender) { 
+                render(); 
+                updateTimers(); 
+            }
+            updateHeaderTodayClicks();
         }
 
         function render() {
@@ -977,6 +996,7 @@
 
         render();
         updateTimers();
+        updateHeaderTodayClicks();
     </script>
 </body>
 </html>
