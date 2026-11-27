@@ -44,7 +44,14 @@
         .sortable-ghost { opacity: 0.4; }
         .sortable-drag { transform: scale(1.02); box-shadow: 0 6px 16px rgba(0,0,0,0.12); z-index: 99; }
 
-        .card-icon { font-size: 22px; margin-right: 10px; width: 28px; text-align: center; }
+        /* 图片/Emoji 容器 */
+        .card-icon { 
+            margin-right: 10px; width: 36px; height: 36px; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+        }
+        .card-icon img { width: 100%; height: 100%; object-fit: cover; }
+
         .info-area { flex: 1; min-width: 0; }
         .title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 2px; }
         .title { font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -66,7 +73,6 @@
         .btn-action { font-size: 12px; color: var(--blue); background: none; border: none; padding: 2px 0; cursor: pointer; }
         .btn-action.delete { color: var(--red); }
 
-        /* == 合并后的按钮与数字样式 == */
         .count-area { margin-left: 12px; }
         .tap-btn { 
             color: white; border: none; border-radius: 14px; 
@@ -80,16 +86,11 @@
         /* == 精简模式 (Compact) 网格设计 == */
         .list-container.compact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-bottom: 80px; }
         .list-container.compact .card { flex-direction: column; padding: 14px 12px; margin-bottom: 0; align-items: center; text-align: center; }
-        .list-container.compact .card-icon { margin: 0 0 6px 0; font-size: 28px; width: 100%; }
+        .list-container.compact .card-icon { margin: 0 0 8px 0; width: 44px; height: 44px; font-size: 32px; border-radius: 10px; }
         .list-container.compact .info-area { width: 100%; display: flex; flex-direction: column; align-items: center; }
         .list-container.compact .title-row { justify-content: center; width: 100%; margin-bottom: 0; }
         .list-container.compact .title { font-size: 16px; white-space: normal; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        /* 隐藏非必需元素 */
-        .list-container.compact .actions, 
-        .list-container.compact .progress-container, 
-        .list-container.compact .step-badge,
-        .list-container.compact .timer-badge { display: none; }
-        
+        .list-container.compact .actions, .list-container.compact .progress-container, .list-container.compact .step-badge, .list-container.compact .timer-badge { display: none; }
         .list-container.compact .count-area { margin: auto 0 0 0; padding-top: 12px; width: 100%; display: flex; flex-direction: column; align-items: center; }
         .list-container.compact .tap-btn { width: 100%; height: 50px; border-radius: 14px; font-size: 26px; }
 
@@ -109,12 +110,22 @@
         .form-row { display: flex; gap: 8px; }
         .form-row .form-group { flex: 1; }
 
-        /* 选择器 */
+        /* 图片/Emoji 选择器 */
         .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
         .icon-item { font-size: 20px; text-align: center; padding: 6px 0; background: var(--bg); border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
         .icon-item.selected { border-color: var(--blue); background: #E5F0FF; transform: scale(1.1); }
         .icon-item.none { font-size: 12px; color: var(--text-sub); display: flex; align-items: center; justify-content: center; }
         
+        /* 自定义图片上传按钮 */
+        .custom-img-btn { 
+            grid-column: span 2; font-size: 12px; color: var(--blue); background: #E5F0FF; 
+            display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer;
+            border: 2px dashed var(--blue); padding: 6px 0;
+        }
+        .custom-img-preview {
+            width: 32px; height: 32px; border-radius: 6px; object-fit: cover; margin: 0 auto; display: block;
+        }
+
         .color-grid { display: flex; flex-wrap: wrap; gap: 10px; }
         .color-item { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; box-sizing: border-box; transition: transform 0.2s; }
         .color-item.selected { transform: scale(1.15); box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--text-sub); }
@@ -145,7 +156,8 @@
         .section-title { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: 600; }
         .stat-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
         .stat-item:last-child { border-bottom: none; }
-        .stat-icon { font-size: 18px; margin-right: 8px; width: 24px; text-align: center; }
+        .stat-icon { font-size: 18px; margin-right: 8px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; overflow: hidden; }
+        .stat-icon img { width: 100%; height: 100%; object-fit: cover; }
         .stat-info { flex: 1; }
         .stat-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; color: var(--text-main); }
         .stat-time { font-size: 10px; color: var(--text-sub); }
@@ -166,8 +178,10 @@
         </div>
     </div>
 
-    <!-- 隐藏的文件上传组件，用于导入数据 -->
+    <!-- 隐藏的文件上传组件 -->
     <input type="file" id="import-file" style="display:none;" accept=".json" onchange="importData(event)">
+    <!-- 隐藏的图片上传组件 -->
+    <input type="file" id="image-upload" style="display:none;" accept="image/*" onchange="handleImageUpload(event)">
 
     <div class="tip-text" id="drag-tip" style="display: none;">💡 长按卡片可自由拖拽排序</div>
 
@@ -187,7 +201,7 @@
             </div>
 
             <div class="form-group">
-                <label>选择图标 (水果 & 运动)</label>
+                <label>选择图标或上传图片</label>
                 <div class="icon-grid" id="icon-grid"></div>
             </div>
 
@@ -266,13 +280,15 @@
     </div>
 
     <script>
+        // 减少了几个 Emoji，给自定义图片按钮腾出空间
         const EMOJI_LIST = [
-            '🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🍈','🍒','🍑','🍍',
-            '🥥','🥝','🍅','🥑','⚽️','🏀','🎾','🏓','🏸','🏊','🚴','🏃'
+            '🍎','🍊','🍌','🍉','🍓','🍒',
+            '⚽️','🏀','🎾','🏓','🏸','🏊',
+            '💊','☕','📚','💻','🚬','💰'
         ];
         const COLOR_LIST = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55', '#5AC8FA', '#8E8E93'];
         
-        let currentSelectedIcon = '';
+        let currentSelectedIcon = ''; // 可能是 emoji 字符，也可能是 base64 图片字符串
         let currentSelectedColor = COLOR_LIST[0];
 
         // 状态读取
@@ -289,6 +305,11 @@
         const statsOverlay = document.getElementById('stats-overlay');
         const settingsOverlay = document.getElementById('settings-overlay');
 
+        // ==== 辅助函数：判断是否为 Base64 图片 ====
+        function isBase64Image(str) {
+            return str && str.startsWith('data:image/');
+        }
+
         // ==== 初始化与渲染 ====
         function saveAndRender(skipRender = false) {
             localStorage.setItem('my_multi_counters', JSON.stringify(counters));
@@ -296,7 +317,6 @@
         }
 
         function render() {
-            // 根据设置控制容器类名
             if (isCompactMode) {
                 listContainer.classList.add('compact');
             } else {
@@ -329,9 +349,17 @@
                 }
 
                 const timerHtml = c.timerMinutes > 0 ? `<span id="timer-${c.id}" class="timer-badge idle">待点击</span>` : '';
-                const iconHtml = c.icon ? `<div class="card-icon">${c.icon}</div>` : '';
+                
+                // 渲染图标：如果是 base64 则渲染 img 标签，否则渲染文字
+                let iconHtml = '';
+                if (c.icon) {
+                    if (isBase64Image(c.icon)) {
+                        iconHtml = `<div class="card-icon"><img src="${c.icon}" alt="icon"></div>`;
+                    } else {
+                        iconHtml = `<div class="card-icon">${c.icon}</div>`;
+                    }
+                }
 
-                // 这里合并了数字和 + 按钮：将单独的数字剥离，把 ${c.count} 放入带颜色和发光阴影的按钮中
                 return `
                 <div class="card" data-id="${c.id}">
                     ${iconHtml}
@@ -387,7 +415,7 @@
             return `${Math.floor(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}`;
         }
         function updateTimers() {
-            if(isCompactMode) return; // 精简模式不显示倒计时徽章
+            if(isCompactMode) return; 
             const now = Date.now();
             counters.forEach(c => {
                 if (!c.timerMinutes) return;
@@ -410,17 +438,83 @@
 
         // ==== 编辑器弹窗及表单 ====
         function renderEmojiGrid() {
-            document.getElementById('icon-grid').innerHTML = EMOJI_LIST.map(emoji => `
+            let html = EMOJI_LIST.map(emoji => `
                 <div class="icon-item ${currentSelectedIcon === emoji ? 'selected' : ''}" onclick="selectIcon('${emoji}')">${emoji}</div>
-            `).join('') + `<div class="icon-item none ${currentSelectedIcon === '' ? 'selected' : ''}" onclick="selectIcon('')">无</div>`;
+            `).join('');
+            
+            html += `<div class="icon-item none ${currentSelectedIcon === '' ? 'selected' : ''}" onclick="selectIcon('')">无</div>`;
+            
+            // 自定义图片按钮
+            const isCustomImg = isBase64Image(currentSelectedIcon);
+            const customContent = isCustomImg 
+                ? `<img src="${currentSelectedIcon}" class="custom-img-preview">` 
+                : `📷 选图`;
+            
+            html += `<div class="custom-img-btn ${isCustomImg ? 'selected' : ''}" onclick="document.getElementById('image-upload').click()">
+                        ${customContent}
+                     </div>`;
+
+            document.getElementById('icon-grid').innerHTML = html;
         }
+
         function renderColorGrid() {
             document.getElementById('color-grid').innerHTML = COLOR_LIST.map(c => `
                 <div class="color-item ${currentSelectedColor === c ? 'selected' : ''}" style="background-color: ${c};" onclick="selectColor('${c}')"></div>
             `).join('');
         }
-        function selectIcon(emoji) { currentSelectedIcon = emoji; renderEmojiGrid(); }
+
+        function selectIcon(val) { currentSelectedIcon = val; renderEmojiGrid(); }
         function selectColor(c) { currentSelectedColor = c; renderColorGrid(); }
+
+        // 处理图片上传
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 为了防止 localStorage 爆满，必须对图片进行压缩
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    // 将图片压缩至 100x100 像素即可，足够图标显示
+                    const MAX_SIZE = 100;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 转换为 base64 (使用 webp 或 jpeg 格式压缩率更高，此处用 jpeg 质量 0.8)
+                    const base64Str = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // 检查大小是否过大 (以防万一)
+                    if (base64Str.length > 50000) { // 大约 50KB 警告
+                        console.warn("图片经过压缩后依然过大，可能会影响存储性能");
+                    }
+                    
+                    currentSelectedIcon = base64Str;
+                    renderEmojiGrid();
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+            event.target.value = ''; // 重置 input
+        }
 
         function openModal(id = null) {
             document.getElementById('m-id').value = id || '';
@@ -474,7 +568,28 @@
                 if (counters[idx].target && counters[idx].count >= counters[idx].target) {
                     setTimeout(() => {
                         const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
-                        history.unshift({ id: Date.now(), counterId: counters[idx].id, name: counters[idx].name, icon: counters[idx].icon, color: counters[idx].color, target: counters[idx].target, time: Date.now() });
+                        
+                        // 优化存储：如果是 Base64 图片，历史记录中不再冗余存储该长字符串，节省空间
+                        let historyIcon = counters[idx].icon;
+                        if (historyIcon && historyIcon.startsWith('data:image/')) {
+                            historyIcon = '🖼️'; // 历史记录里用一个小图标代替，避免 Base64 撑爆存储
+                        }
+
+                        history.unshift({ 
+                            id: Date.now(), 
+                            counterId: counters[idx].id, 
+                            name: counters[idx].name, 
+                            icon: historyIcon, 
+                            color: counters[idx].color, 
+                            target: counters[idx].target, 
+                            time: Date.now() 
+                        });
+                        
+                        // 历史记录容量保护：只保留最近的 10000 条记录
+                        if (history.length > 10000) {
+                            history.length = 10000;
+                        }
+
                         localStorage.setItem('my_counters_history', JSON.stringify(history));
                         alert(`🎉 恭喜！【${counters[idx].name}】已达成目标！`);
                         counters[idx].count = 0; counters[idx].lastUpdated = 0; saveAndRender();
@@ -491,6 +606,14 @@
         }
 
         // ==== 统计大盘 ====
+        function getIconHtml(iconData, sizeStyle = "font-size: 16px;") {
+            if (!iconData) return '';
+            if (isBase64Image(iconData)) {
+                return `<img src="${iconData}" style="width:1.5em; height:1.5em; border-radius:4px; object-fit:cover; vertical-align:middle;">`;
+            }
+            return `<span style="${sizeStyle}">${iconData}</span>`;
+        }
+
         function openStats() {
             const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
             let grandTotal = 0; const statsMap = {}; 
@@ -518,7 +641,7 @@
                         <div class="stats-grid">
                             ${sortedKeys.map(k => `
                                 <div class="stats-card">
-                                    <div class="stats-name-col">${statsMap[k].icon?`<span>${statsMap[k].icon}</span>`:''}<span class="stats-name">${k}</span></div>
+                                    <div class="stats-name-col">${getIconHtml(statsMap[k].icon)}<span class="stats-name">${k}</span></div>
                                     <div class="stats-total" style="color:${statsMap[k].color}">${statsMap[k].total}</div>
                                 </div>
                             `).join('')}
@@ -533,9 +656,15 @@
                 listEl.innerHTML = history.map(item => {
                     const date = new Date(item.time);
                     const timeStr = `${date.getMonth()+1}月${date.getDate()}日 ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+                    
+                    let iconHtml = '';
+                    if(item.icon){
+                        iconHtml = `<div class="stat-icon">${isBase64Image(item.icon) ? `<img src="${item.icon}">` : item.icon}</div>`;
+                    }
+
                     return `
                         <div class="stat-item">
-                            ${item.icon?`<div class="stat-icon">${item.icon}</div>`:''}
+                            ${iconHtml}
                             <div class="stat-info"><div class="stat-title">${item.name}</div><div class="stat-time">${timeStr}</div></div>
                             <div class="stat-target" style="color: ${item.color || 'var(--blue)'}">+${item.target}</div>
                         </div>`;
@@ -561,7 +690,6 @@
             render(); 
         }
 
-        // 导出备份
         function exportData() {
             const data = {
                 counters: counters,
@@ -574,20 +702,16 @@
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
-                    files: [file],
-                    title: '计数器数据备份',
-                    text: '这是我的计数器备份文件。'
+                    files: [file], title: '计数器数据备份', text: '这是我的计数器备份文件。'
                 }).catch(console.error);
             } else {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url; a.download = 'counter_backup.json';
-                a.click();
-                URL.revokeObjectURL(url);
+                a.click(); URL.revokeObjectURL(url);
             }
         }
 
-        // 导入恢复
         function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -595,20 +719,11 @@
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    if (data.counters && Array.isArray(data.counters)) {
-                        localStorage.setItem('my_multi_counters', JSON.stringify(data.counters));
-                    }
-                    if (data.history && Array.isArray(data.history)) {
-                        localStorage.setItem('my_counters_history', JSON.stringify(data.history));
-                    }
-                    if (data.settings && data.settings.isCompactMode !== undefined) {
-                        localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
-                    }
-                    alert("数据恢复成功！");
-                    location.reload(); 
-                } catch (err) {
-                    alert("导入失败：文件格式不正确！");
-                }
+                    if (data.counters && Array.isArray(data.counters)) localStorage.setItem('my_multi_counters', JSON.stringify(data.counters));
+                    if (data.history && Array.isArray(data.history)) localStorage.setItem('my_counters_history', JSON.stringify(data.history));
+                    if (data.settings && data.settings.isCompactMode !== undefined) localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
+                    alert("数据恢复成功！"); location.reload(); 
+                } catch (err) { alert("导入失败：文件格式不正确！"); }
             };
             reader.readAsText(file);
             event.target.value = '';
