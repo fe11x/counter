@@ -307,6 +307,14 @@
                 </div>
             </div>
 
+            <div class="settings-item">
+                <span>专注今日 (仅显示今日点击)</span>
+                <label class="switch">
+                    <input type="checkbox" id="focus-today-toggle" onchange="toggleFocusToday()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <hr style="border:0; border-top:1px solid var(--border); margin:18px 0;">
             
             <div style="font-size: 13px; color: var(--text-sub); margin-bottom: 12px; text-align: center;">
@@ -365,6 +373,7 @@
 
         // 状态读取
         let isCompactMode = localStorage.getItem('my_counter_settings_compact') === 'true';
+        let isFocusToday = localStorage.getItem('my_counter_settings_focus_today') === 'true';
         let gridCols = parseInt(localStorage.getItem('my_counter_settings_grid_cols')) || 2; // 默认2列
         
         let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
@@ -449,7 +458,28 @@
 
             dragTip.style.display = counters.length > 1 ? 'block' : 'none';
 
+            // 获取今天零点时间戳用于“专注今日”计算
+            const now = new Date();
+            const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const clicksLog = JSON.parse(localStorage.getItem('my_counters_clicks')) || [];
+
             listContainer.innerHTML = counters.map((c) => {
+                // 计算当前应显示的数值与进度
+                let displayCount = c.count;
+                if (isFocusToday) {
+                    // 如果开启专注今日，去 clicksLog 捞出该 counter 今天的真实步长之和
+                    displayCount = 0;
+                    clicksLog.forEach(item => {
+                        const timestamp = typeof item === 'number' ? item : item.t;
+                        if (timestamp >= startOfTodayMs) {
+                            const itemId = typeof item === 'number' ? c.id : (item.id || c.id); // 兼容旧数据假设归属
+                            if (itemId === c.id) {
+                                const step = typeof item === 'number' ? 1 : (item.s || 1);
+                                displayCount += step;
+                            }
+                        }
+                    });
+                }
                 if (isCompactMode) {
                     // 动态调整数字大小以适应列数
                     let countFontSize = '54px';
@@ -468,8 +498,9 @@
 
                     let compactProgress = '';
                     if (c.target && c.target > 0) {
-                        const percent = Math.min((c.count / c.target) * 100, 100);
-                        const isSuccess = c.count >= c.target;
+                        // 在专注今日模式下，如果目标也是按日算的，进度条用 displayCount 更合理
+                        const percent = Math.min((displayCount / c.target) * 100, 100);
+                        const isSuccess = displayCount >= c.target;
                         compactProgress = `
                         <div class="compact-progress">
                             <div class="compact-progress-fill" style="width: ${percent}%; background-color: ${isSuccess ? 'var(--green)' : c.color};"></div>
@@ -484,7 +515,7 @@
                     <div class="compact-card" data-id="${c.id}" style="${bgStyle}" onclick="increment(${c.id})">
                         <div class="compact-overlay" style="${overlayStyle}"></div>
                         ${compactAlert}
-                        <div class="compact-count" style="font-size:${countFontSize}">${c.count}</div>
+                        <div class="compact-count" style="font-size:${countFontSize}">${displayCount}</div>
                         ${c.name ? `<div class="compact-name" style="font-size:${nameFontSize}">${c.name}</div>` : ''}
                         ${compactProgress}
                     </div>
@@ -493,12 +524,12 @@
 
                 let progressHtml = '';
                 if (c.target && c.target > 0) {
-                    const percent = Math.min((c.count / c.target) * 100, 100);
+                    const percent = Math.min((displayCount / c.target) * 100, 100);
                     progressHtml = `
                         <div class="progress-container">
                             <div class="progress-text">
                                 <span>进度</span>
-                                <span>${c.count} / ${c.target}</span>
+                                <span>${displayCount} / ${c.target}</span>
                             </div>
                             <div class="progress-track">
                                 <div class="progress-fill" style="width: ${percent}%; background-color: ${c.color}"></div>
@@ -540,7 +571,7 @@
                         <button class="tap-btn" 
                                 style="background-color: ${c.color}; box-shadow: 0 4px 12px ${c.color}66;" 
                                 onclick="increment(${c.id})">
-                            ${c.count}
+                            ${displayCount}
                         </button>
                     </div>
                 </div>
@@ -1019,6 +1050,7 @@
         // ==== 系统设置与导入导出 ====
         function openSettings() {
             document.getElementById('compact-toggle').checked = isCompactMode;
+            document.getElementById('focus-today-toggle').checked = isFocusToday;
             // 恢复列数按钮高亮
             document.querySelectorAll('.segment-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`col-btn-${gridCols}`).classList.add('active');
@@ -1030,6 +1062,12 @@
         function toggleCompact() {
             isCompactMode = document.getElementById('compact-toggle').checked;
             localStorage.setItem('my_counter_settings_compact', isCompactMode);
+            render(); 
+        }
+
+        function toggleFocusToday() {
+            isFocusToday = document.getElementById('focus-today-toggle').checked;
+            localStorage.setItem('my_counter_settings_focus_today', isFocusToday);
             render(); 
         }
 
@@ -1047,8 +1085,8 @@
             const data = {
                 counters: counters,
                 history: JSON.parse(localStorage.getItem('my_counters_history') || '[]'),
-                clicks: JSON.parse(localStorage.getItem('my_counters_clicks') || '[]'), // 补上隐藏的点击流水日志
-                settings: { isCompactMode, gridCols }
+                clicks: JSON.parse(localStorage.getItem('my_counters_clicks') || '[]'),
+                settings: { isCompactMode, gridCols, isFocusToday }
             };
             const jsonStr = JSON.stringify(data, null, 2);
             const blob = new Blob([jsonStr], { type: "application/json" });
@@ -1097,6 +1135,7 @@
                     if (data.settings) {
                         if (data.settings.isCompactMode !== undefined) localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
                         if (data.settings.gridCols !== undefined) localStorage.setItem('my_counter_settings_grid_cols', data.settings.gridCols);
+                        if (data.settings.isFocusToday !== undefined) localStorage.setItem('my_counter_settings_focus_today', data.settings.isFocusToday);
                     }
                     alert("✅ 数据恢复成功！"); location.reload(); 
                 } catch (err) { alert("❌ 导入失败：文件格式不正确或已损坏！"); }
