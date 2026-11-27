@@ -948,6 +948,7 @@
             const data = {
                 counters: counters,
                 history: JSON.parse(localStorage.getItem('my_counters_history') || '[]'),
+                clicks: JSON.parse(localStorage.getItem('my_counters_clicks') || '[]'), // 补上隐藏的点击流水日志
                 settings: { isCompactMode }
             };
             const jsonStr = JSON.stringify(data, null, 2);
@@ -986,6 +987,7 @@
                     const data = JSON.parse(e.target.result);
                     if (data.counters && Array.isArray(data.counters)) localStorage.setItem('my_multi_counters', JSON.stringify(data.counters));
                     if (data.history && Array.isArray(data.history)) localStorage.setItem('my_counters_history', JSON.stringify(data.history));
+                    if (data.clicks && Array.isArray(data.clicks)) localStorage.setItem('my_counters_clicks', JSON.stringify(data.clicks)); // 恢复点击流数据
                     if (data.settings && data.settings.isCompactMode !== undefined) localStorage.setItem('my_counter_settings_compact', data.settings.isCompactMode);
                     alert("数据恢复成功！"); location.reload(); 
                 } catch (err) { alert("导入失败：文件格式不正确！"); }
