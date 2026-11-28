@@ -955,6 +955,14 @@
             
             document.getElementById(`tab-btn-${tab}`).classList.add('active');
             document.getElementById(`stat-tab-${tab}`).style.display = 'block';
+
+            if (tab === 'summary' && typeof summaryChartInstance !== 'undefined' && summaryChartInstance) {
+                summaryChartInstance.resize();
+            }
+            if (tab === 'trends') {
+                if (typeof hourlyChartInstance !== 'undefined' && hourlyChartInstance) hourlyChartInstance.resize();
+                if (typeof dailyChartInstance !== 'undefined' && dailyChartInstance) dailyChartInstance.resize();
+            }
         }
 
         function getIconHtml(iconData, sizeStyle = "font-size: 16px;") {
@@ -967,6 +975,7 @@
 
         let hourlyChartInstance = null;
         let dailyChartInstance = null;
+        let summaryChartInstance = null;
 
         function renderCharts(history, clicksLog) {
             // 图表全局通用配置 (深色模式/浅色模式适配)
@@ -1110,7 +1119,11 @@
                 summaryEl.innerHTML = `
                     <div class="stats-summary-box">
                         <div class="stats-grand-total">总点击次数<span>${grandTotal}</span></div>
-                        <div class="section-title">分类总计</div>
+                        <div class="section-title">分类占比</div>
+                        <div class="chart-container" style="height: 200px; margin-bottom: 16px; background: transparent; box-shadow: none; padding: 0;">
+                            <canvas id="summaryPieChart"></canvas>
+                        </div>
+                        <div class="section-title">详细数据</div>
                         <div class="stats-grid">
                             ${sortedKeys.map(k => `
                                 <div class="stats-card">
@@ -1120,6 +1133,54 @@
                             `).join('')}
                         </div>
                     </div>`;
+
+                setTimeout(() => {
+                    const ctxSummary = document.getElementById('summaryPieChart');
+                    if (ctxSummary) {
+                        if (summaryChartInstance) summaryChartInstance.destroy();
+                        const labels = sortedKeys;
+                        const data = sortedKeys.map(k => statsMap[k].total);
+                        const bgColors = sortedKeys.map(k => statsMap[k].color || '#007AFF');
+                        
+                        summaryChartInstance = new Chart(ctxSummary.getContext('2d'), {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: data,
+                                    backgroundColor: bgColors,
+                                    borderWidth: 2,
+                                    borderColor: '#FFFFFF'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '65%',
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                        labels: { boxWidth: 12, font: { size: 11 }, color: 'var(--text-sub)' }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                let label = context.label || '';
+                                                if (label) {
+                                                    label += ': ';
+                                                }
+                                                if (context.parsed !== null) {
+                                                    label += context.parsed + ' 次';
+                                                }
+                                                return label;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }, 50);
             }
 
             // ==== 3. 渲染 Tab 3：今日明细列表 ====
