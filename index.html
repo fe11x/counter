@@ -903,36 +903,7 @@
                     }
                 }
 
-                if (counters[idx].target && counters[idx].count >= counters[idx].target) {
-                    setTimeout(() => {
-                        const history = JSON.parse(localStorage.getItem('my_counters_history')) || [];
-                        
-                        // 优化存储：如果是 Base64 图片，历史记录中不再冗余存储该长字符串，节省空间
-                        let historyIcon = counters[idx].icon;
-                        if (historyIcon && historyIcon.startsWith('data:image/')) {
-                            historyIcon = '🖼️'; // 历史记录里用一个小图标代替，避免 Base64 撑爆存储
-                        }
 
-                        history.unshift({ 
-                            id: Date.now(), 
-                            counterId: counters[idx].id, 
-                            name: counters[idx].name, 
-                            icon: historyIcon, 
-                            color: counters[idx].color, 
-                            target: counters[idx].target, 
-                            time: Date.now() 
-                        });
-                        
-                        // 历史记录容量保护：只保留最近的 10000 条记录
-                        if (history.length > 10000) {
-                            history.length = 10000;
-                        }
-
-                        localStorage.setItem('my_counters_history', JSON.stringify(history));
-                        alert(`🎉 恭喜！【${counters[idx].name}】已达成目标！`);
-                        counters[idx].count = 0; counters[idx].lastUpdated = 0; saveAndRender();
-                    }, 50);
-                }
             }
         }
         function resetCounter(id) {
