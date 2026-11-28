@@ -164,17 +164,43 @@
       margin-bottom: 8px;
     }
 
+    /* 手牌与提示区并排容器 */
+    .hand-and-hint-wrapper {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-shrink: 0; /* 绝对禁止被压缩 */
+    }
+
     /* 手牌展示区 */
     .hand-display {
+      flex: 1; /* 占据剩余空间 */
       background: var(--card-bg);
       border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 12px;
+      padding: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       border: 2px solid transparent;
       transition: border-color 0.2s;
+      min-width: 0;
     }
     .hand-display.active-turn { border-color: var(--primary); }
+
+    /* 规则记忆提示面板 (放在手牌右边) */
+    .rule-hint-box {
+      width: 145px; /* 固定宽度，适配手机屏幕 */
+      flex-shrink: 0; /* 禁止被压缩 */
+      background: #eef7ff;
+      border-top: 4px solid var(--primary);
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      color: #333;
+      line-height: 1.4;
+      display: none;
+      overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .rule-hint-box strong { color: var(--primary); display: block; margin-bottom: 4px; font-size: 12px; }
 
     .hand-header {
       display: flex;
@@ -205,6 +231,7 @@
       padding: 12px;
       padding-bottom: calc(12px + env(safe-area-inset-bottom));
       box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      flex-shrink: 0; /* 绝对禁止被压缩 */
     }
     .bid-grid {
       display: grid;
@@ -291,14 +318,17 @@
 
   <div class="turn-indicator" id="turn-indicator">当前轮到: 北家(N) 叫牌</div>
 
-  <div class="hand-display active-turn" id="hand-display">
-    <div class="hand-header">
-      <span id="current-view-title">北家 (N)</span>
-      <span id="current-hcp">0 HCP</span>
+  <div class="hand-and-hint-wrapper">
+    <div class="hand-display active-turn" id="hand-display">
+      <div class="hand-header">
+        <span id="current-view-title">北家 (N)</span>
+        <span id="current-hcp">0 HCP</span>
+      </div>
+      <div id="hand-cards">
+        <!-- 牌面注入 -->
+      </div>
     </div>
-    <div id="hand-cards">
-      <!-- 牌面注入 -->
-    </div>
+    <div id="rule-hint-box" class="rule-hint-box"></div>
   </div>
 
   <div class="bidding-box">
@@ -520,6 +550,72 @@
       return { valid: true };
     }
     // -----------------------
+
+    function getRulesHintText() {
+      let rules = [];
+      const isOpening = currentBidValue === 0;
+
+      if (isOpening) {
+        rules.push("<strong>【开叫规则】</strong>");
+        rules.push("• 1NT: 16-18点均型");
+        rules.push("• 2NT: 22-24点均型");
+        rules.push("• 1♥/1♠: 11+点, 至少5张");
+        rules.push("• 1♣/1♦: 11+点, 1♦需3张+");
+        rules.push("• 2阶阻击: 6-10点, 6张套");
+        rules.push("• 2♣强开: 19+点");
+        return rules.join('<br>');
+      }
+
+      let partnerBid = null;
+      if (auction.length >= 2) {
+         partnerBid = auction[auction.length - 2].text;
+      }
+      
+      const isOpenerRebid = (auction.length === 4 && turnIndex === 0);
+      const isRespRebid = (auction.length === 6 && turnIndex === 2);
+
+      if (isOpenerRebid) {
+        rules.push("<strong>【开叫人再叫】</strong>");
+        rules.push("• 13-15点: 再叫1NT / 平叫原花色(需6张) / 平加叫应叫花色(需4张)");
+        rules.push("• 16-18点: 跳叫原花色 / 跳加叫应叫花色(需4张)");
+        rules.push("• 19-21点: 跳加叫直接进局");
+        return rules.join('<br>');
+      }
+
+      if (isRespRebid) {
+        const firstResp = auction[2].text;
+        if (firstResp === '1NT') {
+          rules.push("<strong>【1NT逼叫后的应叫人再叫】</strong>");
+          rules.push("• 示选开叫高花(平叫, 需3张): 6-7点");
+          rules.push("• 跳示选高花(跳叫, 需3张): 10-12点");
+          rules.push("• 邀请 2NT: 10-12点");
+          return rules.join('<br>');
+        }
+      }
+
+      if (partnerBid) {
+        if (partnerBid === '1♥' || partnerBid === '1♠') {
+          rules.push("<strong>【对1阶高花的应叫】</strong>");
+          rules.push("• 1NT (逼叫): 6-12点");
+          rules.push("• 2阶平加叫: 8-10点, 3张支持");
+          rules.push("• 3阶跳加叫: 6点以下, 4张支持(阻击)");
+          rules.push("• 4阶进局: 10点以下, 5张支持");
+        } else if (partnerBid === '1♣' || partnerBid === '1♦') {
+          rules.push("<strong>【对1阶低花的应叫】</strong>");
+          rules.push("• 1NT (不逼叫): 6-10点");
+          rules.push("• 2NT (邀请): 10-12点");
+          rules.push("• 3NT: 13-15点");
+        } else if (partnerBid === '1NT') {
+          rules.push("<strong>【对1NT的应叫】</strong>");
+          rules.push("• 转移叫(2♦/2♥): 保证目标高花至少5张");
+        } else {
+          rules.push("<strong>【后续应叫】</strong>");
+          rules.push("• 请根据体系自由发挥或Pass");
+        }
+      }
+
+      return rules.join('<br>');
+    }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -827,7 +923,10 @@
     }
 
     function updateBiddingBox() {
+      const hintBox = document.getElementById('rule-hint-box');
+
       if (isAuctionOver) {
+        if (hintBox) hintBox.style.display = 'none';
         document.querySelectorAll('.bid-btn').forEach(b => {
            b.disabled = true;
            b.style.opacity = '0.3';
@@ -838,6 +937,19 @@
 
       const hintMode = document.getElementById('hint-mode-toggle').checked;
       const currentPlayer = players[turnIndex];
+
+      if (hintMode && !isAuctionOver) {
+         hintBox.style.display = 'block';
+         // 强制触发一下排版重绘，并检查内容
+         const hintHtml = getRulesHintText();
+         if (hintHtml) {
+             hintBox.innerHTML = hintHtml;
+         } else {
+             hintBox.style.display = 'none'; // 如果没有可用提示，隐藏
+         }
+      } else {
+         hintBox.style.display = 'none';
+      }
 
       const bidBtns = document.querySelectorAll('.bid-grid .bid-btn');
       bidBtns.forEach(btn => {
