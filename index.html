@@ -119,23 +119,14 @@
         .compact-progress-fill { height: 100%; transition: width 0.3s ease; }
         
         .compact-alert-icon { 
-            position: absolute; top: 12px; right: 12px; z-index: 3; 
+            position: absolute; top: 8px; right: 8px; z-index: 3; 
             background-color: var(--red); color: white;
-            font-size: 10px; font-weight: 800; letter-spacing: 0.5px;
-            padding: 4px 8px; border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(255,59,48,0.4);
+            font-size: 11px; font-weight: 800; width: 14px; height: 14px;
             display: none; /* 默认隐藏 */
-            text-transform: uppercase;
+            border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .compact-alert-icon.danger { 
-            display: flex; align-items: center; justify-content: center;
-            /* 呼吸灯效果代替抽搐摇摆 */
-            animation: pulse-red 2s infinite cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-        
-        @keyframes pulse-red {
-            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 2px 8px rgba(255,59,48,0.6); }
-            50% { opacity: 0.8; transform: scale(0.95); box-shadow: 0 1px 4px rgba(255,59,48,0.2); }
+            display: block; 
         }
 
         .empty-state { text-align: center; color: var(--text-sub); margin-top: 80px; font-size: 14px; grid-column: 1 / -1; }
@@ -548,7 +539,7 @@
                     }
 
                     const compactAlert = c.timerMinutes > 0 
-                        ? `<span id="alert-compact-${c.id}" class="compact-alert-icon">🔔</span>` 
+                        ? `<span id="alert-compact-${c.id}" class="compact-alert-icon"></span>` 
                         : '';
 
                     return `
