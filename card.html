@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="桥牌训练">
+  <title>桥牌叫牌训练</title>
+  
+  <style>
+    :root {
+      --spades: #000000;
+      --hearts: #e74c3c;
+      --diamonds: #e67e22;
+      --clubs: #27ae60;
+      --bg-color: #f2f2f7;
+      --card-bg: #ffffff;
+      --primary: #007aff;
+      --error: #ff3b30;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #d1d1d6;
+    }
+
+    header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn:active { opacity: 0.7; }
+
+    /* 提示框 Toast */
+    #toast {
+      position: fixed;
+      top: env(safe-area-inset-top, 20px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 1000;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-align: center;
+      width: 90%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(20px); }
+
+    /* 叫牌过程展示区 */
+    .auction-board {
+      flex: 1;
+      background: var(--card-bg);
+      border-radius: 12px;
+      margin: 12px 0;
+      padding: 10px;
+      overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .auction-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      text-align: center;
+      gap: 5px;
+    }
+    .auction-header { font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 5px; font-size: 14px; color: #666; }
+    .auction-cell { padding: 4px 0; font-size: 16px; }
+
+    /* 状态指示器 */
+    .turn-indicator {
+      text-align: center;
+      font-size: 15px;
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    /* 手牌展示区 */
+    .hand-display {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .hand-display.active-turn { border-color: var(--primary); }
+
+    .hand-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    .suit-row {
+      display: flex;
+      align-items: center;
+      font-size: 20px;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+      font-family: "SF Pro Display", sans-serif;
+    }
+    .suit-icon { width: 24px; text-align: center; margin-right: 8px; }
+    
+    .spades { color: var(--spades); }
+    .hearts { color: var(--hearts); }
+    .diamonds { color: var(--diamonds); }
+    .clubs { color: var(--clubs); }
+    .nt { color: #8e44ad; }
+
+    /* 叫牌盒 (Bidding Box) */
+    .bidding-box {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 12px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    }
+    .bid-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .bid-btn {
+      background: #f2f2f7;
+      border: 1px solid #d1d1d6;
+      border-radius: 8px;
+      padding: 10px 0;
+      font-size: 16px;
+      font-weight: 500;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .bid-btn:active { background: #e5e5ea; }
+    .bid-btn:disabled { opacity: 0.3; pointer-events: none; }
+    
+    .bid-pass { background: #27ae60; color: white; border: none; }
+    .bid-x { background: #e74c3c; color: white; border: none; }
+    .bid-xx { background: #2980b9; color: white; border: none; }
+  </style>
+</head>
+<body>
+
+  <div id="toast">错误提示</div>
+
+  <header>
+    <h1>规则训练模式</h1>
+    <button class="btn" onclick="dealNewGame()">发牌</button>
+  </header>
+
+  <div class="auction-board">
+    <div class="auction-grid" id="auction-grid">
+      <div class="auction-header">北(N)</div>
+      <div class="auction-header">东(E)</div>
+      <div class="auction-header">南(S)</div>
+      <div class="auction-header">西(W)</div>
+    </div>
+  </div>
+
+  <div class="turn-indicator" id="turn-indicator">当前轮到: 北家(N) 叫牌</div>
+
+  <div class="hand-display active-turn" id="hand-display">
+    <div class="hand-header">
+      <span id="current-view-title">北家 (N)</span>
+      <span id="current-hcp">0 HCP</span>
+    </div>
+    <div id="hand-cards">
+      <!-- 牌面注入 -->
+    </div>
+  </div>
+
+  <div class="bidding-box">
+    <div class="bid-grid" id="bid-grid"></div>
+    <div class="action-grid">
+      <div class="bid-btn bid-pass" onclick="handlePlayerBid('Pass')">Pass</div>
+      <div class="bid-btn bid-x" id="btn-x" onclick="handlePlayerBid('X')" disabled>X</div>
+      <div class="bid-btn bid-xx" id="btn-xx" onclick="handlePlayerBid('XX')" disabled>XX</div>
+    </div>
+  </div>
+
+  <script>
+    const suits = [
+      { id: 'S', icon: '♠', class: 'spades', weight: 4 },
+      { id: 'H', icon: '♥', class: 'hearts', weight: 3 },
+      { id: 'D', icon: '♦', class: 'diamonds', weight: 2 },
+      { id: 'C', icon: '♣', class: 'clubs', weight: 1 }
+    ];
+    const ranks = ['A','K','Q','J','10','9','8','7','6','5','4','3','2'];
+    const rankValues = { 'A':14, 'K':13, 'Q':12, 'J':11, '10':10, '9':9, '8':8, '7':7, '6':6, '5':5, '4':4, '3':3, '2':2 };
+    const hcpValues = { 'A':4, 'K':3, 'Q':2, 'J':1 };
+
+    const players = ['N', 'E', 'S', 'W'];
+    let hands = { N: [], E: [], S: [], W: [] };
+    
+    let auction = [];
+    let currentBidValue = 0; 
+    let passCount = 0;
+    let turnIndex = 0; // 0:N, 1:E, 2:S, 3:W
+    let isAuctionOver = false;
+    
+    // --- 规则校验引擎 ---
+    function analyzeHand(hand) {
+      let hcp = 0;
+      let lengths = { S:0, H:0, D:0, C:0 };
+      hand.forEach(c => {
+        if(hcpValues[c.rank]) hcp += hcpValues[c.rank];
+        lengths[c.suit]++;
+      });
+      return { hcp, lengths };
+    }
+
+    // ⭐ 核心：在这里定义你的叫牌规则
+    function validateBid(bidder, bidStr, bidValue) {
+      const stats = analyzeHand(hands[bidder]);
+      const history = auction.map(b => b.text); // 叫牌历史数组，如 ['Pass', 'Pass']
+
+      // 示例规则 1：开叫 1NT 必须 15-17 点，且必须是均型（暂不严谨校验均型，仅校验点数）
+      if (currentBidValue === 0 && bidStr === '1NT') {
+        if (stats.hcp < 15 || stats.hcp > 17) {
+          return { valid: false, msg: `规则错误：开叫 1NT 需要 15-17 点，你当前只有 ${stats.hcp} 点` };
+        }
+      }
+
+      // 示例规则 2：开叫 1阶高花 (1H/1S) 必须满足该花色至少 5 张
+      if (currentBidValue === 0 && (bidStr === '1♥' || bidStr === '1♠')) {
+        const suit = bidStr === '1♥' ? 'H' : 'S';
+        const suitName = bidStr === '1♥' ? '红桃' : '黑桃';
+        if (stats.lengths[suit] < 5) {
+          return { valid: false, msg: `规则错误：开叫 1${suitName} 必须保证至少 5 张，你只有 ${stats.lengths[suit]} 张` };
+        }
+      }
+
+      // 示例规则 3：点数不足 12 点不能在一阶正常开叫 (这里简化处理)
+      if (currentBidValue === 0 && bidStr !== 'Pass' && stats.hcp < 12 && !bidStr.startsWith('2') && !bidStr.startsWith('3')) {
+        return { valid: false, msg: `规则错误：正常一阶开叫需要至少 12 点，你当前只有 ${stats.hcp} 点` };
+      }
+
+      return { valid: true };
+    }
+    // -----------------------
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function initUI() {
+      const bidGrid = document.getElementById('bid-grid');
+      bidGrid.innerHTML = '';
+      const strains = [
+        { id: 'C', icon: '♣', class: 'clubs' },
+        { id: 'D', icon: '♦', class: 'diamonds' },
+        { id: 'H', icon: '♥', class: 'hearts' },
+        { id: 'S', icon: '♠', class: 'spades' },
+        { id: 'NT', icon: 'NT', class: 'nt' }
+      ];
+
+      for (let level = 1; level <= 7; level++) {
+        strains.forEach((strain, index) => {
+          const btn = document.createElement('div');
+          btn.className = `bid-btn ${strain.class}`;
+          btn.innerHTML = `${level}${strain.icon}`;
+          const bidVal = level * 10 + index;
+          btn.id = `bid-${bidVal}`;
+          btn.onclick = () => handlePlayerBid(`${level}${strain.icon}`, bidVal);
+          bidGrid.appendChild(btn);
+        });
+      }
+    }
+
+    function dealNewGame() {
+      let deck = [];
+      suits.forEach(suit => {
+        ranks.forEach(rank => deck.push({ suit: suit.id, rank: rank, val: rankValues[rank] }));
+      });
+
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+
+      hands = { N: [], E: [], S: [], W: [] };
+      deck.forEach((card, index) => hands[players[index % 4]].push(card));
+
+      players.forEach(p => {
+        hands[p].sort((a, b) => {
+          if (a.suit !== b.suit) return suits.find(s=>s.id===b.suit).weight - suits.find(s=>s.id===a.suit).weight;
+          return b.val - a.val;
+        });
+      });
+
+      auction = [];
+      currentBidValue = 0;
+      passCount = 0;
+      turnIndex = 0; // 北家先叫
+      isAuctionOver = false;
+      
+      renderAuction();
+      updateBiddingBox();
+      switchToPlayer('N');
+    }
+
+    function switchToPlayer(player) {
+      const titleMap = { N: '北家 (N)', S: '南家 (S)' };
+      document.getElementById('current-view-title').innerText = titleMap[player] || player;
+      document.getElementById('turn-indicator').innerText = `当前轮到: ${titleMap[player]} 叫牌`;
+      
+      const container = document.getElementById('hand-cards');
+      container.innerHTML = '';
+      
+      let hcp = 0;
+      const hand = hands[player];
+
+      suits.forEach(suitInfo => {
+        const cardsInSuit = hand.filter(c => c.suit === suitInfo.id);
+        const row = document.createElement('div');
+        row.className = `suit-row ${suitInfo.class}`;
+        
+        const icon = document.createElement('div');
+        icon.className = 'suit-icon';
+        icon.innerText = suitInfo.icon;
+        
+        const cardsText = document.createElement('div');
+        let ranksStr = cardsInSuit.map(c => {
+          if(hcpValues[c.rank]) hcp += hcpValues[c.rank];
+          return c.rank;
+        }).join(' ');
+        
+        cardsText.innerText = ranksStr || '—';
+        
+        row.appendChild(icon);
+        row.appendChild(cardsText);
+        container.appendChild(row);
+      });
+
+      document.getElementById('current-hcp').innerText = `${hcp} HCP`;
+    }
+
+    // 处理玩家（N/S）的叫牌点击
+    function handlePlayerBid(bidStr, bidValue = 0) {
+      if (isAuctionOver) return;
+      const currentPlayer = players[turnIndex];
+
+      // 规则校验
+      const validation = validateBid(currentPlayer, bidStr, bidValue);
+      if (!validation.valid) {
+        showToast(validation.msg);
+        return; // 拒绝叫牌
+      }
+
+      commitBid(currentPlayer, bidStr, bidValue);
+      nextTurn();
+    }
+
+    // 记录叫牌数据
+    function commitBid(player, bidStr, bidValue) {
+      auction.push({ text: bidStr, val: bidValue });
+      
+      if (bidStr === 'Pass') {
+        passCount++;
+      } else {
+        passCount = 0;
+        if (bidValue > 0) currentBidValue = bidValue;
+      }
+    }
+
+    // 推进轮次
+    function nextTurn() {
+      // 检查是否结束（开局4个pass，或者有人叫牌后连续3个pass）
+      if ((auction.length === 4 && passCount === 4) || (auction.length > 3 && passCount === 3)) {
+        isAuctionOver = true;
+        renderAuction();
+        updateBiddingBox();
+        document.getElementById('turn-indicator').innerText = "叫牌结束";
+        showToast("叫牌结束！");
+        return;
+      }
+
+      turnIndex = (turnIndex + 1) % 4;
+      const nextPlayer = players[turnIndex];
+
+      // 如果轮到 E 或 W，自动 Pass 并继续下一轮
+      if (nextPlayer === 'E' || nextPlayer === 'W') {
+        commitBid(nextPlayer, 'Pass', 0);
+        renderAuction(); // 更新面板显示 E/W 的 Pass
+        setTimeout(() => nextTurn(), 200); // 稍微延迟一点点，让 UI 动画更自然
+      } else {
+        // 轮到 N 或 S，切换 UI 等待操作
+        switchToPlayer(nextPlayer);
+        renderAuction();
+        updateBiddingBox();
+      }
+    }
+
+    function renderAuction() {
+      const grid = document.getElementById('auction-grid');
+      while (grid.childNodes.length > 9) grid.removeChild(grid.lastChild);
+      
+      // 填充前置空白（因为庄家永远是北家N，所以从第一列开始，不需要补空）
+      // 如果你以后改为随机发牌人，这里需要根据 dealer 补空 div
+      
+      auction.forEach(bid => {
+        const cell = document.createElement('div');
+        cell.className = 'auction-cell';
+        if(bid.text.includes('♥') || bid.text.includes('♦')) cell.style.color = 'var(--hearts)';
+        else if(bid.text.includes('♠') || bid.text.includes('♣')) cell.style.color = 'var(--spades)';
+        else if(bid.text === 'Pass') cell.style.color = '#27ae60';
+        else if(bid.text === 'X' || bid.text === 'XX') cell.style.color = '#e74c3c';
+        
+        cell.innerHTML = bid.text;
+        grid.appendChild(cell);
+      });
+      
+      const board = document.querySelector('.auction-board');
+      board.scrollTop = board.scrollHeight;
+    }
+
+    function updateBiddingBox() {
+      if (isAuctionOver) {
+        document.querySelectorAll('.bid-btn').forEach(b => b.disabled = true);
+        return;
+      }
+
+      const bidBtns = document.querySelectorAll('.bid-grid .bid-btn');
+      bidBtns.forEach(btn => {
+        const val = parseInt(btn.id.split('-')[1]);
+        btn.disabled = val <= currentBidValue;
+      });
+
+      const btnX = document.getElementById('btn-x');
+      const btnXX = document.getElementById('btn-xx');
+      btnX.disabled = currentBidValue === 0;
+      btnXX.disabled = currentBidValue === 0;
+      
+      document.querySelector('.bid-pass').disabled = false;
+    }
+
+    initUI();
+    dealNewGame();
+  </script>
+</body>
+</html>
