@@ -79,6 +79,44 @@
     }
     #toast.show { transform: translateX(-50%) translateY(20px); }
 
+    /* 开关 Toggle */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #666;
+    }
+    .toggle-label { margin-right: 8px; }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(20px); }
+
     /* 叫牌过程展示区 */
     .auction-board {
       flex: 1;
@@ -186,6 +224,13 @@
 
   <header>
     <h1>规则训练模式</h1>
+    <div class="toggle-container">
+      <span class="toggle-label">提示模式</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="hint-mode-toggle" onchange="updateBiddingBox()">
+        <span class="slider"></span>
+      </label>
+    </div>
     <button class="btn" onclick="dealNewGame()">发牌</button>
   </header>
 
@@ -250,30 +295,103 @@
       return { hcp, lengths };
     }
 
-    // ⭐ 核心：在这里定义你的叫牌规则
+    // ⭐ 核心：根据 rules.docx 提取的叫牌规则
     function validateBid(bidder, bidStr, bidValue) {
       const stats = analyzeHand(hands[bidder]);
-      const history = auction.map(b => b.text); // 叫牌历史数组，如 ['Pass', 'Pass']
+      const isOpening = currentBidValue === 0 && bidStr !== 'Pass' && bidStr !== 'X' && bidStr !== 'XX';
 
-      // 示例规则 1：开叫 1NT 必须 15-17 点，且必须是均型（暂不严谨校验均型，仅校验点数）
-      if (currentBidValue === 0 && bidStr === '1NT') {
-        if (stats.hcp < 15 || stats.hcp > 17) {
-          return { valid: false, msg: `规则错误：开叫 1NT 需要 15-17 点，你当前只有 ${stats.hcp} 点` };
+      // 判断均型：5-3-3-2(仅限低花5), 4-4-3-2, 4-3-3-3
+      const sortedLengths = Object.values(stats.lengths).sort((a,b)=>b-a);
+      const isBalanced = sortedLengths[0] <= 5 && sortedLengths[1] >= 3 && sortedLengths[2] >= 2 && sortedLengths[3] >= 2 && !(sortedLengths[0] === 5 && (stats.lengths.S === 5 || stats.lengths.H === 5));
+
+      // 提取当前叫牌花色字符
+      let bidSuit = '';
+      if (bidStr.includes('♠')) bidSuit = 'S';
+      else if (bidStr.includes('♥')) bidSuit = 'H';
+      else if (bidStr.includes('♦')) bidSuit = 'D';
+      else if (bidStr.includes('♣')) bidSuit = 'C';
+
+      // 一、开叫规则校验
+      if (isOpening) {
+        // 1NT: 16-18点均型（包括5-3-3-2带五张低花套）
+        if (bidStr === '1NT') {
+          if (stats.hcp < 16 || stats.hcp > 18) return { valid: false, msg: `基础架构：开叫 1NT 需要 16-18 点，当前 ${stats.hcp} 点` };
+          if (!isBalanced) return { valid: false, msg: `基础架构：开叫 1NT 必须是均型（五张套只能是低花）` };
+        }
+        // 2NT: 22-24点均型
+        if (bidStr === '2NT') {
+          if (stats.hcp < 22 || stats.hcp > 24) return { valid: false, msg: `基础架构：开叫 2NT 需要 22-24 点，当前 ${stats.hcp} 点` };
+          if (!isBalanced) return { valid: false, msg: `基础架构：开叫 2NT 必须是均型` };
+        }
+        // 一阶高花：五张以上
+        if (bidStr === '1♥' || bidStr === '1♠') {
+          if (stats.lengths[bidSuit] < 5) return { valid: false, msg: `规则：开叫高花必须保证 5 张以上` };
+          if (stats.hcp < 11) return { valid: false, msg: `规则：一阶开叫点力不足` };
+        }
+        // 一阶低花
+        if (bidStr === '1♣' || bidStr === '1♦') {
+          if (stats.hcp < 11) return { valid: false, msg: `规则：一阶开叫点力不足` };
+          if (bidStr === '1♦' && stats.lengths.D < 3) return { valid: false, msg: `规则：1♦通常保证3张以上(四四开叫1♦, 三三开叫1♣)` };
+        }
+        // 阻击性开叫：二阶六张，三阶通常七张
+        if (bidStr.startsWith('2') && bidSuit && bidStr !== '2♣') {
+          if (stats.lengths[bidSuit] < 6) return { valid: false, msg: `规则：阻击性二阶开叫需保证六张` };
+          if (stats.hcp > 10) return { valid: false, msg: `规则：阻击性开叫不应超过10点` };
+        }
+        if (bidStr.startsWith('3') && bidSuit) {
+          if (stats.lengths[bidSuit] < 7) return { valid: false, msg: `规则：阻击性三阶开叫通常需要七张` };
+        }
+        // 强2♣开叫：19点以上或者25点以上均型牌
+        if (bidStr === '2♣') {
+          if (stats.hcp < 19) return { valid: false, msg: `规则：强2♣开叫需要19点以上(或25+点均型)` };
         }
       }
 
-      // 示例规则 2：开叫 1阶高花 (1H/1S) 必须满足该花色至少 5 张
-      if (currentBidValue === 0 && (bidStr === '1♥' || bidStr === '1♠')) {
-        const suit = bidStr === '1♥' ? 'H' : 'S';
-        const suitName = bidStr === '1♥' ? '红桃' : '黑桃';
-        if (stats.lengths[suit] < 5) {
-          return { valid: false, msg: `规则错误：开叫 1${suitName} 必须保证至少 5 张，你只有 ${stats.lengths[suit]} 张` };
-        }
+      // 二、应叫规则校验
+      let partnerBid = null;
+      // N E S W 轮转，同伴的叫牌永远是倒数第2个（隔过一个敌方自动Pass）
+      if (auction.length >= 2) {
+         partnerBid = auction[auction.length - 2].text;
       }
 
-      // 示例规则 3：点数不足 12 点不能在一阶正常开叫 (这里简化处理)
-      if (currentBidValue === 0 && bidStr !== 'Pass' && stats.hcp < 12 && !bidStr.startsWith('2') && !bidStr.startsWith('3')) {
-        return { valid: false, msg: `规则错误：正常一阶开叫需要至少 12 点，你当前只有 ${stats.hcp} 点` };
+      if (!isOpening && partnerBid && partnerBid !== 'Pass' && bidStr !== 'Pass') {
+        const isPartner1Major = partnerBid === '1♥' || partnerBid === '1♠';
+        const partnerSuit = isPartner1Major ? (partnerBid === '1♥' ? 'H' : 'S') : null;
+
+        // 对开叫高花的应叫
+        if (isPartner1Major) {
+          if (bidStr === '1NT') {
+            if (stats.hcp < 6 || stats.hcp > 12) return { valid: false, msg: `规则：对高花的1NT应叫（逼叫），点力应为 6-12 点` };
+          }
+          if (bidSuit === partnerSuit) {
+             if (bidStr.startsWith('2')) {
+                if (stats.lengths[bidSuit] < 3) return { valid: false, msg: `规则：二阶平加叫需要 3 张王牌支持` };
+                if (stats.hcp < 8 || stats.hcp > 10) return { valid: false, msg: `规则：二阶平加叫应为 8-10 点` };
+             }
+             if (bidStr.startsWith('3')) {
+                if (stats.lengths[bidSuit] < 4) return { valid: false, msg: `规则：三阶跳加叫阻击需要 4 张王牌支持` };
+                if (stats.hcp > 6) return { valid: false, msg: `规则：三阶跳加叫阻击点力应在 6 点或以下` };
+             }
+             if (bidStr.startsWith('4')) {
+                if (stats.lengths[bidSuit] < 5) return { valid: false, msg: `规则：直接加叫到四阶需要 5 张王牌` };
+                if (stats.hcp > 10) return { valid: false, msg: `规则：直接加叫到四阶点力应在 10 点以下` };
+             }
+          }
+        }
+
+        // 对开叫低花的应叫
+        const isPartner1Minor = partnerBid === '1♣' || partnerBid === '1♦';
+        if (isPartner1Minor) {
+           if (bidStr === '1NT') {
+              if (stats.hcp < 6 || stats.hcp > 10) return { valid: false, msg: `规则：对低花应叫1NT为不逼叫，6-10点` };
+           }
+           if (bidStr === '2NT') {
+              if (stats.hcp < 10 || stats.hcp > 12) return { valid: false, msg: `规则：对低花应叫2NT为邀请，10-12点` };
+           }
+           if (bidStr === '3NT') {
+              if (stats.hcp < 13 || stats.hcp > 15) return { valid: false, msg: `规则：对低花应叫3NT，13-15点` };
+           }
+        }
       }
 
       return { valid: true };
@@ -460,22 +578,91 @@
 
     function updateBiddingBox() {
       if (isAuctionOver) {
-        document.querySelectorAll('.bid-btn').forEach(b => b.disabled = true);
+        document.querySelectorAll('.bid-btn').forEach(b => {
+           b.disabled = true;
+           b.style.opacity = '0.3';
+           b.onclick = null; // 移除点击事件
+        });
         return;
       }
+
+      const hintMode = document.getElementById('hint-mode-toggle').checked;
+      const currentPlayer = players[turnIndex];
 
       const bidBtns = document.querySelectorAll('.bid-grid .bid-btn');
       bidBtns.forEach(btn => {
         const val = parseInt(btn.id.split('-')[1]);
-        btn.disabled = val <= currentBidValue;
+        const bidStr = btn.innerText;
+
+        if (val <= currentBidValue) {
+          // 阶梯低于当前叫牌，绝对禁用
+          btn.disabled = true;
+          btn.style.opacity = '0.3';
+          btn.onclick = null;
+        } else {
+          // 阶梯合法，检查是否符合规则（仅在提示模式下变灰）
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          
+          if (hintMode) {
+             const validation = validateBid(currentPlayer, bidStr, val);
+             if (!validation.valid) {
+                btn.style.opacity = '0.3'; // 变灰
+                // 不真正 disable 按钮，而是拦截点击，弹出提示
+                btn.onclick = () => showToast(validation.msg);
+             } else {
+                btn.onclick = () => handlePlayerBid(bidStr, val);
+             }
+          } else {
+             // 非提示模式，正常绑定叫牌事件
+             btn.onclick = () => handlePlayerBid(bidStr, val);
+          }
+        }
       });
 
       const btnX = document.getElementById('btn-x');
       const btnXX = document.getElementById('btn-xx');
-      btnX.disabled = currentBidValue === 0;
-      btnXX.disabled = currentBidValue === 0;
       
-      document.querySelector('.bid-pass').disabled = false;
+      [btnX, btnXX].forEach(btn => {
+         const isX = btn.id === 'btn-x';
+         const bidStr = isX ? 'X' : 'XX';
+         
+         if (currentBidValue === 0) {
+            btn.disabled = true;
+            btn.style.opacity = '0.3';
+            btn.onclick = null;
+         } else {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            
+            if (hintMode) {
+               const validation = validateBid(currentPlayer, bidStr, 0);
+               if (!validation.valid) {
+                  btn.style.opacity = '0.3';
+                  btn.onclick = () => showToast(validation.msg);
+               } else {
+                  btn.onclick = () => handlePlayerBid(bidStr, 0);
+               }
+            } else {
+               btn.onclick = () => handlePlayerBid(bidStr, 0);
+            }
+         }
+      });
+      
+      const btnPass = document.querySelector('.bid-pass');
+      btnPass.disabled = false;
+      btnPass.style.opacity = '1';
+      if (hintMode) {
+         const validation = validateBid(currentPlayer, 'Pass', 0);
+         if (!validation.valid) {
+            btnPass.style.opacity = '0.3';
+            btnPass.onclick = () => showToast(validation.msg);
+         } else {
+            btnPass.onclick = () => handlePlayerBid('Pass', 0);
+         }
+      } else {
+         btnPass.onclick = () => handlePlayerBid('Pass', 0);
+      }
     }
 
     initUI();
