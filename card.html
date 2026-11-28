@@ -274,6 +274,9 @@
         <option value="rebid_med">专项：开叫人再叫 (16-18点中限)</option>
         <option value="rebid_max">专项：开叫人再叫 (19-21点高限)</option>
       </optgroup>
+      <optgroup label="应叫人再叫训练 (南家第二次叫牌)">
+        <option value="resp_rebid_1nt_force">专项：1NT逼叫后应叫人再叫</option>
+      </optgroup>
     </select>
   </div>
 
@@ -481,6 +484,39 @@
           }
       }
 
+      // 五、应叫人的再叫 (Responder's Rebid)
+      // 特别针对 rules.docx 中的 "1NT逼叫后的应叫人再叫"
+      if (auction.length === 6 && bidder === 'S') {
+          const openingBid = auction[0].text; // 北家开叫 (例如 1♠)
+          const firstResponse = auction[2].text; // 南家第一轮应叫 (例如 1NT)
+          const openerRebid = auction[4].text; // 北家再叫 (例如 2♣)
+
+          const isOpeningMajor = openingBid === '1♥' || openingBid === '1♠';
+          const openingSuit = openingBid === '1♥' ? 'H' : (openingBid === '1♠' ? 'S' : null);
+
+          if (isOpeningMajor && firstResponse === '1NT') {
+              // 在 1NT 逼叫后，南家(S)的第二次叫牌
+              
+              // 1. 示选开叫高花 (如 1S - 1NT - 2C - 2S)
+              if (bidSuit === openingSuit) {
+                  const level = parseInt(bidStr.charAt(0));
+                  if (level === 2) {
+                      if (stats.lengths[openingSuit] < 3) return { valid: false, msg: `规则：示选开叫高花需要3张支持` };
+                      if (stats.hcp > 7) return { valid: false, msg: `规则：二阶示选开叫高花点力应为 6-7 点` };
+                  }
+                  if (level === 3) {
+                      if (stats.lengths[openingSuit] < 3) return { valid: false, msg: `规则：跳示选开叫高花需要3张支持` };
+                      if (stats.hcp < 10 || stats.hcp > 12) return { valid: false, msg: `规则：跳示选开叫高花点力应为 10+-12- 点` };
+                  }
+              }
+              
+              // 2. 邀请 2NT (如 1S - 1NT - 2C - 2NT)
+              if (bidStr === '2NT') {
+                  if (stats.hcp < 10 || stats.hcp > 12) return { valid: false, msg: `规则：1NT逼叫后应叫 2NT 邀请，需要 10+-12- 点` };
+              }
+          }
+      }
+
       return { valid: true };
     }
     // -----------------------
@@ -570,8 +606,8 @@
          const nStats = analyzeHand(hands.N);
          
          // 决定北家的开叫
-         if (ruleId.includes('1nt')) { autoBidText = '1NT'; autoBidVal = 14; }
-         else if (ruleId.includes('1major') || ruleId.startsWith('rebid_')) {
+         if (ruleId === 'open_1nt' || ruleId === 'resp_1nt') { autoBidText = '1NT'; autoBidVal = 14; }
+         else if (ruleId.includes('1major') || ruleId.startsWith('rebid_') || ruleId.startsWith('resp_rebid_')) {
              if (nStats.lengths.S >= 5 && nStats.lengths.S >= nStats.lengths.H) { autoBidText = '1♠'; autoBidVal = 13; }
              else if (nStats.lengths.H >= 5) { autoBidText = '1♥'; autoBidVal = 12; }
              else if (nStats.lengths.D >= nStats.lengths.C) { autoBidText = '1♦'; autoBidVal = 11; }
@@ -584,7 +620,7 @@
              else { autoBidText = '1♣'; autoBidVal = 10; }
          }
 
-         if (autoBidText) {
+         if (autoBidText && auction.length === 0) {
              auction.push({ text: autoBidText, val: autoBidVal }); // N叫牌
              auction.push({ text: 'Pass', val: 0 }); // E自动Pass
              currentBidValue = autoBidVal;
@@ -608,6 +644,26 @@
              currentBidValue = sBidVal;
              passCount = 1;
              turnIndex = 0; // 重新轮到北家 (N) 练习再叫
+         }
+
+         // 如果是应叫人再叫训练 (如 1NT逼叫后)，帮 N 开叫，帮 S 应叫 1NT，再帮 N 再叫
+         if (ruleId === 'resp_rebid_1nt_force' && auction.length === 2) {
+             // 强制帮南家应叫 1NT (逼叫)
+             auction.push({ text: '1NT', val: 14 }); // S应叫 1NT
+             auction.push({ text: 'Pass', val: 0 }); // W自动Pass
+             
+             // 帮北家做第二轮叫牌 (找个非第一套的低花或第二高花叫一下)
+             let nRebidText = '2♣';
+             let nRebidVal = 20;
+             if (nStats.lengths.D > nStats.lengths.C && autoBidText !== '1♦') { nRebidText = '2♦'; nRebidVal = 21; }
+             if (nStats.lengths.H >= 4 && autoBidText !== '1♥') { nRebidText = '2♥'; nRebidVal = 22; }
+             
+             auction.push({ text: nRebidText, val: nRebidVal }); // N再叫
+             auction.push({ text: 'Pass', val: 0 }); // E自动Pass
+             
+             currentBidValue = nRebidVal;
+             passCount = 1;
+             turnIndex = 2; // 球回到南家 (S) 进行再叫练习
          }
       }
       
@@ -647,6 +703,9 @@
           return nStats.hcp >= 16 && nStats.hcp <= 18 && sStats.hcp >= 6;
         case 'rebid_max':
           return nStats.hcp >= 19 && nStats.hcp <= 21 && sStats.hcp >= 6;
+        case 'resp_rebid_1nt_force':
+          // 发一手适合高花开叫的牌给北，并给南发6-12点的牌（适合1NT逼叫）
+          return nStats.hcp >= 11 && (nStats.lengths.S >= 5 || nStats.lengths.H >= 5) && sStats.hcp >= 6 && sStats.hcp <= 12;
         default:
           return true;
       }
