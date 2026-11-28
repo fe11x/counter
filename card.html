@@ -256,12 +256,19 @@
     </div>
     <select id="training-rule" class="rule-select" onchange="dealNewGame()">
       <option value="random">完全随机</option>
-      <option value="open_1nt">专项：1NT开叫 (16-18均型)</option>
-      <option value="open_2nt">专项：2NT开叫 (22-24均型)</option>
-      <option value="open_1major">专项：1阶高花开叫</option>
-      <option value="open_1minor">专项：1阶低花开叫</option>
-      <option value="open_2c">专项：强2♣开叫 (19+点)</option>
-      <option value="open_preempt">专项：弱牌阻击 (6-10点)</option>
+      <optgroup label="开叫训练 (北家先叫)">
+        <option value="open_1nt">专项：1NT开叫 (16-18均型)</option>
+        <option value="open_2nt">专项：2NT开叫 (22-24均型)</option>
+        <option value="open_1major">专项：1阶高花开叫</option>
+        <option value="open_1minor">专项：1阶低花开叫</option>
+        <option value="open_2c">专项：强2♣开叫 (19+点)</option>
+        <option value="open_preempt">专项：弱牌阻击 (6-10点)</option>
+      </optgroup>
+      <optgroup label="应叫训练 (南家应叫)">
+        <option value="resp_1nt">专项：对1NT的应叫</option>
+        <option value="resp_1major">专项：对1阶高花的应叫</option>
+        <option value="resp_1minor">专项：对1阶低花的应叫</option>
+      </optgroup>
     </select>
   </div>
 
@@ -515,12 +522,39 @@
       auction = [];
       currentBidValue = 0;
       passCount = 0;
-      turnIndex = 0; // 北家先叫
+      turnIndex = 0; // 默认北家先叫
       isAuctionOver = false;
+
+      // --- 应叫训练：自动帮北家(N)开叫，东家(E)自动Pass ---
+      if (ruleId.startsWith('resp_')) {
+         let autoBidText = '';
+         let autoBidVal = 0;
+         const nStats = analyzeHand(hands.N);
+         
+         if (ruleId === 'resp_1nt') { autoBidText = '1NT'; autoBidVal = 14; }
+         else if (ruleId === 'resp_1major') {
+             if (nStats.lengths.S >= 5 && nStats.lengths.S >= nStats.lengths.H) { autoBidText = '1♠'; autoBidVal = 13; }
+             else { autoBidText = '1♥'; autoBidVal = 12; }
+         }
+         else if (ruleId === 'resp_1minor') {
+             if (nStats.lengths.D >= nStats.lengths.C && nStats.lengths.D >= 4) { autoBidText = '1♦'; autoBidVal = 11; }
+             else if (nStats.lengths.D === 3 && nStats.lengths.C === 3) { autoBidText = '1♣'; autoBidVal = 10; }
+             else if (nStats.lengths.D > nStats.lengths.C) { autoBidText = '1♦'; autoBidVal = 11; }
+             else { autoBidText = '1♣'; autoBidVal = 10; }
+         }
+
+         if (autoBidText) {
+             auction.push({ text: autoBidText, val: autoBidVal }); // N叫牌
+             auction.push({ text: 'Pass', val: 0 }); // E自动Pass
+             currentBidValue = autoBidVal;
+             passCount = 1; // 1个Pass(来自E)
+             turnIndex = 2; // 直接轮到南家(S)
+         }
+      }
       
       renderAuction();
       updateBiddingBox();
-      switchToPlayer('N');
+      switchToPlayer(players[turnIndex]);
     }
 
     // 目标发牌规则匹配器
@@ -532,12 +566,15 @@
 
       switch(ruleId) {
         case 'open_1nt':
+        case 'resp_1nt':
           return stats.hcp >= 16 && stats.hcp <= 18 && isBalanced;
         case 'open_2nt':
           return stats.hcp >= 22 && stats.hcp <= 24 && isBalanced;
         case 'open_1major':
+        case 'resp_1major':
           return stats.hcp >= 11 && stats.hcp <= 21 && (stats.lengths.S >= 5 || stats.lengths.H >= 5);
         case 'open_1minor':
+        case 'resp_1minor':
           return stats.hcp >= 11 && stats.hcp <= 21 && stats.lengths.S < 5 && stats.lengths.H < 5 && (stats.lengths.C >= 3 || stats.lengths.D >= 3);
         case 'open_2c':
           return stats.hcp >= 19;
