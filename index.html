@@ -315,6 +315,14 @@
                 </label>
             </div>
 
+            <div class="settings-item">
+                <span>自动时间排序 (最新点击排最后)</span>
+                <label class="switch">
+                    <input type="checkbox" id="auto-sort-toggle" onchange="toggleAutoSort()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <hr style="border:0; border-top:1px solid var(--border); margin:18px 0;">
             
             <div style="font-size: 13px; color: var(--text-sub); margin-bottom: 12px; text-align: center;">
@@ -391,9 +399,13 @@
         // 状态读取
         let isCompactMode = localStorage.getItem('my_counter_settings_compact') === 'true';
         let isFocusToday = localStorage.getItem('my_counter_settings_focus_today') === 'true';
+        let isAutoSort = localStorage.getItem('my_counter_settings_auto_sort') === 'true';
         let gridCols = parseInt(localStorage.getItem('my_counter_settings_grid_cols')) || 2; // 默认2列
         
         let counters = JSON.parse(localStorage.getItem('my_multi_counters')) || [];
+        if (isAutoSort) {
+            counters.sort((a, b) => (a.lastUpdated || 0) - (b.lastUpdated || 0));
+        }
         counters = counters.map(c => ({
             ...c, step: c.step || 1, target: c.target || null, icon: c.icon || '',
             color: c.color || COLOR_LIST[0], timerMinutes: c.timerMinutes || 0, lastUpdated: c.lastUpdated || 0
@@ -440,6 +452,9 @@
 
         // ==== 初始化与渲染 ====
         function saveAndRender(skipRender = false) {
+            if (isAutoSort) {
+                counters.sort((a, b) => (a.lastUpdated || 0) - (b.lastUpdated || 0));
+            }
             localStorage.setItem('my_counters_clicks', JSON.stringify(JSON.parse(localStorage.getItem('my_counters_clicks')) || [])); // Ensure it exists
             localStorage.setItem('my_multi_counters', JSON.stringify(counters));
             if (!skipRender) { 
@@ -479,7 +494,7 @@
                 return;
             }
 
-            dragTip.style.display = counters.length > 1 ? 'block' : 'none';
+            dragTip.style.display = (counters.length > 1 && !isAutoSort) ? 'block' : 'none';
 
             // 获取今天零点时间戳用于“专注今日”计算
             const now = new Date();
@@ -607,6 +622,7 @@
         let sortableInstance = null;
         function initSortable() {
             if (sortableInstance) sortableInstance.destroy();
+            if (isAutoSort) return; // 开启自动排序时禁用手动拖拽
             if (typeof Sortable !== 'undefined') {
                 sortableInstance = new Sortable(listContainer, {
                     animation: 150, delay: 200, delayOnTouchOnly: true,
@@ -883,6 +899,15 @@
 
                 // 4. 重置倒计时铃铛状态（如果是精简模式且超时的状态，一点击铃铛要消失）
                 updateTimers();
+
+                // 如果开启了自动排序，将这张被点击的卡片在 DOM 中移动到最后
+                if (isAutoSort && cardEl) {
+                    const cardNode = cardEl.closest('.card, .compact-card');
+                    if (cardNode) {
+                        // 把它移动到容器的末尾
+                        listContainer.appendChild(cardNode);
+                    }
+                }
 
                 if (counters[idx].target && counters[idx].count >= counters[idx].target) {
                     setTimeout(() => {
@@ -1164,6 +1189,7 @@
         function openSettings() {
             document.getElementById('compact-toggle').checked = isCompactMode;
             document.getElementById('focus-today-toggle').checked = isFocusToday;
+            document.getElementById('auto-sort-toggle').checked = isAutoSort;
             // 恢复列数按钮高亮
             document.querySelectorAll('.segment-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`col-btn-${gridCols}`).classList.add('active');
@@ -1183,6 +1209,12 @@
             localStorage.setItem('my_counter_settings_focus_today', isFocusToday);
             render(); 
             updateHeaderTotal();
+        }
+
+        function toggleAutoSort() {
+            isAutoSort = document.getElementById('auto-sort-toggle').checked;
+            localStorage.setItem('my_counter_settings_auto_sort', isAutoSort);
+            saveAndRender(); 
         }
 
         function setGridCols(cols) {
