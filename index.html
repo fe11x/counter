@@ -344,15 +344,14 @@
             <div class="segment-control" style="margin-bottom: 16px;">
                 <div id="tab-btn-trends" class="segment-btn active" onclick="switchStatTab('trends')">趋势概览</div>
                 <div id="tab-btn-details" class="segment-btn" onclick="switchStatTab('details')">今日明细</div>
+                <div id="tab-btn-summary" class="segment-btn" onclick="switchStatTab('summary')">项目总计</div>
             </div>
             
             <div style="max-height: 70vh; overflow-y: auto; padding-bottom: 20px;" id="stats-scroll-area">
                 
                 <!-- Tab 1: Trends -->
                 <div id="stat-tab-trends">
-                    <div id="stats-summary-container"></div>
-                    
-                    <div class="section-title">近10小时活跃度 (今日)</div>
+                    <div class="section-title" style="margin-top: 0; padding-top: 0;">近10小时活跃度 (今日)</div>
                     <div class="chart-container">
                         <canvas id="hourlyChart"></canvas>
                     </div>
@@ -366,6 +365,11 @@
                 <!-- Tab 2: Details -->
                 <div id="stat-tab-details" style="display: none;">
                     <div id="stats-list"></div>
+                </div>
+
+                <!-- Tab 3: Summary -->
+                <div id="stat-tab-summary" style="display: none;">
+                    <div id="stats-summary-container"></div>
                 </div>
                 
             </div>
@@ -922,8 +926,11 @@
 
         // ==== 统计面板逻辑 ====
         function switchStatTab(tab) {
+            document.getElementById('tab-btn-summary').classList.remove('active');
             document.getElementById('tab-btn-trends').classList.remove('active');
             document.getElementById('tab-btn-details').classList.remove('active');
+            
+            document.getElementById('stat-tab-summary').style.display = 'none';
             document.getElementById('stat-tab-trends').style.display = 'none';
             document.getElementById('stat-tab-details').style.display = 'none';
             
@@ -1096,6 +1103,7 @@
                     </div>`;
             }
 
+            // ==== 3. 渲染 Tab 3：今日明细列表 ====
             const listEl = document.getElementById('stats-list');
             
             // 过滤出今天的点击记录，并按时间倒序（最新的在前）
@@ -1142,7 +1150,7 @@
                 }).join('');
             }
             
-            switchStatTab('trends'); // 打开时默认显示趋势标签
+            switchStatTab('trends'); // 打开时默认显示趋势概览标签
             statsOverlay.style.display = 'flex';
             
             // 延迟渲染图表，确保 Canvas 元素已经显示在屏幕上
