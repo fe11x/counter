@@ -269,6 +269,11 @@
         <option value="resp_1major">专项：对1阶高花的应叫</option>
         <option value="resp_1minor">专项：对1阶低花的应叫</option>
       </optgroup>
+      <optgroup label="再叫训练 (北开-南应-北再叫)">
+        <option value="rebid_min">专项：开叫人再叫 (13-15点低限)</option>
+        <option value="rebid_med">专项：开叫人再叫 (16-18点中限)</option>
+        <option value="rebid_max">专项：开叫人再叫 (19-21点高限)</option>
+      </optgroup>
     </select>
   </div>
 
@@ -432,6 +437,50 @@
         }
       }
 
+      // 三、对 1NT 开叫的应叫 (斯台曼/转移叫)
+      if (auction.length >= 2 && partnerBid === '1NT' && !isOpening) {
+          if (bidStr === '2♦' || bidStr === '2♥') {
+              const targetSuit = bidStr === '2♦' ? 'H' : 'S';
+              if (stats.lengths[targetSuit] < 5) return { valid: false, msg: `规则：转移叫通常保证目标花色至少 5 张` };
+          }
+      }
+
+      // 四、开叫人的再叫 (Opener's Rebid)
+      if (auction.length === 4 && bidder === 'N') {
+          const openingBid = auction[0].text;
+          const responseBid = auction[2].text;
+          const isOpening1Suit = openingBid.match(/^1[♠♥♦♣]/);
+
+          if (isOpening1Suit && responseBid !== 'Pass') {
+              const isMin = stats.hcp >= 12 && stats.hcp <= 15;
+              const isMed = stats.hcp >= 16 && stats.hcp <= 18;
+              const isMax = stats.hcp >= 19 && stats.hcp <= 21;
+
+              // 1. 再叫 1NT
+              if (bidStr === '1NT') {
+                  if (!isMin) return { valid: false, msg: `规则：再叫 1NT 显示 13-15 点均型牌，你当前 ${stats.hcp} 点` };
+              }
+              // 2. 平叫原花色 (例如 1H - 1S - 2H)
+              if (bidStr.charAt(0) === '2' && bidStr.slice(1) === openingBid.slice(1)) {
+                  if (stats.lengths[bidSuit] < 6) return { valid: false, msg: `规则：再叫原花色通常保证 6 张` };
+                  if (!isMin) return { valid: false, msg: `规则：平级再叫原花色显示 13-15 点` };
+              }
+              // 3. 跳叫原花色 (例如 1H - 1S - 3H)
+              if (bidStr.charAt(0) === '3' && bidStr.slice(1) === openingBid.slice(1)) {
+                  if (!isMed) return { valid: false, msg: `规则：跳再叫原花色显示 16-18 点，你当前 ${stats.hcp} 点` };
+              }
+              // 4. 支持同伴花色
+              const respSuit = responseBid.slice(1);
+              if (bidSuit === respSuit) {
+                  const levelDiff = parseInt(bidStr.charAt(0)) - parseInt(responseBid.charAt(0));
+                  if (stats.lengths[bidSuit] < 4) return { valid: false, msg: `规则：加叫应叫花色保证 4 张支持` };
+                  if (levelDiff === 1 && !isMin) return { valid: false, msg: `规则：平加叫应叫花色显示 13-15 点` };
+                  if (levelDiff === 2 && !isMed) return { valid: false, msg: `规则：跳加叫应叫花色显示 16-18 点` };
+                  if (levelDiff === 3 && !isMax) return { valid: false, msg: `规则：跳加叫进局显示 19-21 点` };
+              }
+          }
+      }
+
       return { valid: true };
     }
     // -----------------------
@@ -475,23 +524,22 @@
         ranks.forEach(rank => deck.push({ suit: suit.id, rank: rank, val: rankValues[rank] }));
       });
 
-      let northHand = [];
-      let remainingDeck = [];
       let matched = false;
-      let maxAttempts = 100000; // 防卡死限制
+      let maxAttempts = 100000;
 
       for (let attempts = 0; attempts < maxAttempts; attempts++) {
-        // 洗牌前13张给北家 (Partial shuffle, 超快)
-        for (let i = 0; i < 13; i++) {
-            let r = i + Math.floor(Math.random() * (52 - i));
+        // 洗牌全部52张
+        for (let i = 51; i > 0; i--) {
+            let r = Math.floor(Math.random() * (i + 1));
             let temp = deck[i];
             deck[i] = deck[r];
             deck[r] = temp;
         }
-        northHand = deck.slice(0, 13);
+        let n = deck.slice(0, 13);
+        let s = deck.slice(13, 26);
 
-        if (isHandMatchingTargetRule(northHand, ruleId)) {
-            remainingDeck = deck.slice(13);
+        if (isHandMatchingTargetRule(n, s, ruleId)) {
+            hands = { N: n, E: deck.slice(26, 39), S: s, W: deck.slice(39, 52) };
             matched = true;
             break;
         }
@@ -499,18 +547,8 @@
 
       if (!matched) {
           alert("生成特定牌型超时，已降级为随机发牌。");
-          remainingDeck = deck.slice(13);
+          hands = { N: deck.slice(0, 13), E: deck.slice(13, 26), S: deck.slice(26, 39), W: deck.slice(39, 52) };
       }
-
-      // 洗牌剩下的 39 张给 E, S, W
-      for (let i = 0; i < 39; i++) {
-          let r = i + Math.floor(Math.random() * (39 - i));
-          let temp = remainingDeck[i];
-          remainingDeck[i] = remainingDeck[r];
-          remainingDeck[r] = temp;
-      }
-
-      hands = { N: northHand, E: remainingDeck.slice(0, 13), S: remainingDeck.slice(13, 26), W: remainingDeck.slice(26, 39) };
 
       players.forEach(p => {
         hands[p].sort((a, b) => {
@@ -525,18 +563,21 @@
       turnIndex = 0; // 默认北家先叫
       isAuctionOver = false;
 
-      // --- 应叫训练：自动帮北家(N)开叫，东家(E)自动Pass ---
-      if (ruleId.startsWith('resp_')) {
+      // --- 应叫与再叫训练：自动帮叫 ---
+      if (ruleId.startsWith('resp_') || ruleId.startsWith('rebid_')) {
          let autoBidText = '';
          let autoBidVal = 0;
          const nStats = analyzeHand(hands.N);
          
-         if (ruleId === 'resp_1nt') { autoBidText = '1NT'; autoBidVal = 14; }
-         else if (ruleId === 'resp_1major') {
+         // 决定北家的开叫
+         if (ruleId.includes('1nt')) { autoBidText = '1NT'; autoBidVal = 14; }
+         else if (ruleId.includes('1major') || ruleId.startsWith('rebid_')) {
              if (nStats.lengths.S >= 5 && nStats.lengths.S >= nStats.lengths.H) { autoBidText = '1♠'; autoBidVal = 13; }
-             else { autoBidText = '1♥'; autoBidVal = 12; }
+             else if (nStats.lengths.H >= 5) { autoBidText = '1♥'; autoBidVal = 12; }
+             else if (nStats.lengths.D >= nStats.lengths.C) { autoBidText = '1♦'; autoBidVal = 11; }
+             else { autoBidText = '1♣'; autoBidVal = 10; }
          }
-         else if (ruleId === 'resp_1minor') {
+         else if (ruleId.includes('1minor')) {
              if (nStats.lengths.D >= nStats.lengths.C && nStats.lengths.D >= 4) { autoBidText = '1♦'; autoBidVal = 11; }
              else if (nStats.lengths.D === 3 && nStats.lengths.C === 3) { autoBidText = '1♣'; autoBidVal = 10; }
              else if (nStats.lengths.D > nStats.lengths.C) { autoBidText = '1♦'; autoBidVal = 11; }
@@ -550,6 +591,24 @@
              passCount = 1; // 1个Pass(来自E)
              turnIndex = 2; // 直接轮到南家(S)
          }
+
+         // 如果是再叫训练，继续帮南家应叫
+         if (ruleId.startsWith('rebid_') && auction.length === 2) {
+             let sBidText = '1NT';
+             let sBidVal = 14; // fallback 6-10点应叫
+             const sStats = analyzeHand(hands.S);
+             if (autoBidText === '1♣' || autoBidText === '1♦') {
+                 if (sStats.lengths.S >= 4) { sBidText = '1♠'; sBidVal = 13; }
+                 else if (sStats.lengths.H >= 4) { sBidText = '1♥'; sBidVal = 12; }
+             } else if (autoBidText === '1♥') {
+                 if (sStats.lengths.S >= 4) { sBidText = '1♠'; sBidVal = 13; }
+             }
+             auction.push({ text: sBidText, val: sBidVal }); // S应叫
+             auction.push({ text: 'Pass', val: 0 }); // W自动Pass
+             currentBidValue = sBidVal;
+             passCount = 1;
+             turnIndex = 0; // 重新轮到北家 (N) 练习再叫
+         }
       }
       
       renderAuction();
@@ -558,28 +617,36 @@
     }
 
     // 目标发牌规则匹配器
-    function isHandMatchingTargetRule(hand, ruleId) {
+    function isHandMatchingTargetRule(n, s, ruleId) {
       if (ruleId === 'random') return true;
-      const stats = analyzeHand(hand);
-      const sortedLengths = Object.values(stats.lengths).sort((a,b)=>b-a);
-      const isBalanced = sortedLengths[0] <= 5 && sortedLengths[1] >= 3 && sortedLengths[2] >= 2 && sortedLengths[3] >= 2 && !(sortedLengths[0] === 5 && (stats.lengths.S === 5 || stats.lengths.H === 5));
+      const nStats = analyzeHand(n);
+      const sStats = analyzeHand(s);
+      
+      const sortedLengths = Object.values(nStats.lengths).sort((a,b)=>b-a);
+      const isBalanced = sortedLengths[0] <= 5 && sortedLengths[1] >= 3 && sortedLengths[2] >= 2 && sortedLengths[3] >= 2 && !(sortedLengths[0] === 5 && (nStats.lengths.S === 5 || nStats.lengths.H === 5));
 
       switch(ruleId) {
         case 'open_1nt':
         case 'resp_1nt':
-          return stats.hcp >= 16 && stats.hcp <= 18 && isBalanced;
+          return nStats.hcp >= 16 && nStats.hcp <= 18 && isBalanced;
         case 'open_2nt':
-          return stats.hcp >= 22 && stats.hcp <= 24 && isBalanced;
+          return nStats.hcp >= 22 && nStats.hcp <= 24 && isBalanced;
         case 'open_1major':
         case 'resp_1major':
-          return stats.hcp >= 11 && stats.hcp <= 21 && (stats.lengths.S >= 5 || stats.lengths.H >= 5);
+          return nStats.hcp >= 11 && nStats.hcp <= 21 && (nStats.lengths.S >= 5 || nStats.lengths.H >= 5);
         case 'open_1minor':
         case 'resp_1minor':
-          return stats.hcp >= 11 && stats.hcp <= 21 && stats.lengths.S < 5 && stats.lengths.H < 5 && (stats.lengths.C >= 3 || stats.lengths.D >= 3);
+          return nStats.hcp >= 11 && nStats.hcp <= 21 && nStats.lengths.S < 5 && nStats.lengths.H < 5 && (nStats.lengths.C >= 3 || nStats.lengths.D >= 3);
         case 'open_2c':
-          return stats.hcp >= 19;
+          return nStats.hcp >= 19;
         case 'open_preempt':
-          return stats.hcp >= 6 && stats.hcp <= 10 && sortedLengths[0] >= 6 && sortedLengths[0] <= 7;
+          return nStats.hcp >= 6 && nStats.hcp <= 10 && sortedLengths[0] >= 6 && sortedLengths[0] <= 7;
+        case 'rebid_min':
+          return nStats.hcp >= 12 && nStats.hcp <= 15 && sStats.hcp >= 6; // S需要有足够点力应叫
+        case 'rebid_med':
+          return nStats.hcp >= 16 && nStats.hcp <= 18 && sStats.hcp >= 6;
+        case 'rebid_max':
+          return nStats.hcp >= 19 && nStats.hcp <= 21 && sStats.hcp >= 6;
         default:
           return true;
       }
